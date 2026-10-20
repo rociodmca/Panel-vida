@@ -1,4 +1,5 @@
 import { formatDate, formatTime } from "@/lib/datetime";
+import { formatWeatherLine, type DigestWeather } from "@/lib/digest/weather";
 
 export interface DigestData {
   displayName: string | null;
@@ -26,6 +27,10 @@ export interface DigestData {
   }>;
   /** false cuando ninguna integración ha aportado datos (para no presentar vacío como error). */
   integrationsAvailable: boolean;
+  /** Clima de hoy; se omite la sección si es null (fallo de red, etc.). */
+  weather?: DigestWeather | null;
+  /** Frase del día; se omite la sección si es null. */
+  phrase?: string | null;
 }
 
 export interface DigestEmail {
@@ -48,6 +53,12 @@ export function buildDigest(data: DigestData): string {
   lines.push(`Buenos días${quien}.`);
   lines.push(`Resumen del ${formatDate(data.localDate)}.`);
   lines.push("");
+
+  if (data.weather) {
+    lines.push("CLIMA DE HOY");
+    lines.push(`- ${formatWeatherLine(data.weather)}`);
+    lines.push("");
+  }
 
   lines.push("AGENDA DE HOY");
   if (data.events.length === 0) {
@@ -107,6 +118,13 @@ export function buildDigest(data: DigestData): string {
     }
   }
   lines.push("");
+
+  if (data.phrase) {
+    lines.push("FRASE DEL DÍA");
+    lines.push(data.phrase);
+    lines.push("");
+  }
+
   lines.push("—");
   lines.push("Panel de vida · Este resumen se genera con tus datos privados y no se comparte con terceros.");
 

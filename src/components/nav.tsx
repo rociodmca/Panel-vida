@@ -3,15 +3,27 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-const items = [
+interface NavItem {
+  href: string;
+  label: string;
+  icon: () => React.ReactElement;
+  /** Solo en el menú lateral de escritorio (móvil queda en 5 entradas). */
+  desktopOnly?: boolean;
+}
+
+const items: NavItem[] = [
   { href: "/hoy", label: "Hoy", icon: SunIcon },
   { href: "/agenda", label: "Agenda", icon: CalendarIcon },
   { href: "/tareas", label: "Tareas", icon: CheckIcon },
+  { href: "/bienestar", label: "Bienestar", icon: HeartIcon },
+  { href: "/enfoque", label: "Enfoque", icon: TimerIcon, desktopOnly: true },
+  { href: "/buscar", label: "Buscar", icon: SearchIcon, desktopOnly: true },
   { href: "/ajustes", label: "Ajustes", icon: SettingsIcon },
 ];
 
 export function Nav() {
   const pathname = usePathname();
+  const mobileItems = items.filter((item) => !item.desktopOnly);
 
   return (
     <>
@@ -57,7 +69,7 @@ export function Nav() {
         aria-label="Principal"
         className="fixed inset-x-0 bottom-0 z-40 flex border-t border-zinc-200 bg-white pb-[env(safe-area-inset-bottom)] dark:border-zinc-800 dark:bg-zinc-950 md:hidden"
       >
-        {items.map(({ href, label, icon: Icon }) => {
+        {mobileItems.map(({ href, label, icon: Icon }) => {
           const active = pathname === href || pathname.startsWith(`${href}/`);
           return (
             <Link
@@ -103,6 +115,32 @@ function CheckIcon() {
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
       <path d="M9 11l3 3L22 4" />
       <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+    </svg>
+  );
+}
+
+function HeartIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21.2l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.8z" />
+    </svg>
+  );
+}
+
+function TimerIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+      <circle cx="12" cy="13" r="8" />
+      <path d="M12 9v4l2 2M9 2h6" />
+    </svg>
+  );
+}
+
+function SearchIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+      <circle cx="11" cy="11" r="7" />
+      <path d="M21 21l-4.3-4.3" />
     </svg>
   );
 }

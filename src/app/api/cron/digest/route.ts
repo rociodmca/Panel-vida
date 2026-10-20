@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { CRON_SECRET, isDemoMode } from "@/lib/config";
 import { localDayKey, localTimeKey } from "@/lib/datetime";
 import { buildDigestEmail } from "@/lib/digest/build";
+import { phraseOfTheDay } from "@/lib/digest/phrase";
+import { fetchTodayWeather } from "@/lib/digest/weather";
 import { shouldSendDigest, weekdayIndex } from "@/lib/digest/schedule";
 import { sendEmail } from "@/lib/email/sender";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
@@ -45,6 +47,12 @@ export async function GET(request: Request) {
   let enviados = 0;
   let omitidos = 0;
   let fallos = 0;
+
+  // Clima y frase se calculan una sola vez para toda la tanda.
+  const [weather, phrase] = await Promise.all([
+    fetchTodayWeather(),
+    Promise.resolve(phraseOfTheDay(localDayKey())),
+  ]);
 
   for (const row of prefsRows ?? []) {
     const prefs = row as DigestPreferences & { user_id: string; digest_email: string | null };
@@ -102,6 +110,8 @@ export async function GET(request: Request) {
       tasks: (tasks ?? []) as never,
       emails: (emails ?? []) as never,
       integrationsAvailable: (events?.length ?? 0) > 0 || (emails?.length ?? 0) > 0,
+      weather,
+      phrase,
     });
 
     const result = await sendEmail({

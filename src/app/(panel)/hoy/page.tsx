@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { connection } from "next/server";
 import { GymTracker } from "@/components/gym-tracker";
+import { HabitsTracker } from "@/components/habits-tracker";
 import { TasksSection } from "@/components/tasks-section";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/states";
-import { getGymStatus } from "@/lib/data/gym";
+import { getGymStatus, getTodayGymSets } from "@/lib/data/gym";
+import { getHabitsStatus } from "@/lib/data/habits";
 import { getRecentEmails, getUpcomingEvents } from "@/lib/data/dashboard";
 import {
   currentGreeting,
@@ -21,10 +23,12 @@ export const instant = false;
 
 export default async function HoyPage() {
   await connection();
-  const [events, emails, gym] = await Promise.all([
+  const [events, emails, gym, gymSets, habits] = await Promise.all([
     getUpcomingEvents(10),
     getRecentEmails(5),
     getGymStatus(),
+    getTodayGymSets(),
+    getHabitsStatus(),
   ]);
   const todayEvents = events.filter((event) => isToday(event.starts_at));
   const importantEmails = emails.filter((mail) => mail.is_important || mail.is_unread);
@@ -181,9 +185,24 @@ export default async function HoyPage() {
         </Card>
 
         <Card title="Gimnasio" description="Registro diario y racha de la semana.">
-          <GymTracker status={gym} demoMode={isDemoMode()} />
+          <GymTracker status={gym} sets={gymSets} demoMode={isDemoMode()} />
         </Card>
       </div>
+
+      <Card
+        title="Hábitos de hoy"
+        description="Márcalos al terminarlos; la racha se rompe si pierdes un día."
+        action={
+          <Link
+            href="/bienestar"
+            className="text-sm font-medium text-teal-800 underline hover:text-teal-900 dark:text-teal-200"
+          >
+            Gestionar en Bienestar
+          </Link>
+        }
+      >
+        <HabitsTracker status={habits} demoMode={isDemoMode()} />
+      </Card>
     </div>
   );
 }

@@ -24,6 +24,11 @@ const EXPORTABLE_TABLES = [
   "tasks",
   "notes",
   "gym_sessions",
+  "gym_sets",
+  "habits",
+  "habit_logs",
+  "sleep_logs",
+  "journal_entries",
   "digest_deliveries",
   "sync_runs",
 ] as const;
@@ -83,6 +88,13 @@ export async function deleteAccountData(): Promise<DataActionState> {
     }
 
     // 2) Borrado local de todo lo que pertenece al usuario.
+    // Primero las tablas hijas (FK a gym_sessions y habits), luego el resto.
+    for (const table of ["gym_sets", "habit_logs"] as const) {
+      const { error } = await admin.from(table).delete().eq("user_id", user.id);
+      if (error) {
+        return { error: "No se pudieron borrar todos los datos. Inténtalo de nuevo." };
+      }
+    }
     const deletions = [
       admin.from("tasks").delete().eq("user_id", user.id),
       admin.from("notes").delete().eq("user_id", user.id),
@@ -90,6 +102,9 @@ export async function deleteAccountData(): Promise<DataActionState> {
       admin.from("email_items_cache").delete().eq("user_id", user.id),
       admin.from("calendar_sources").delete().eq("user_id", user.id),
       admin.from("gym_sessions").delete().eq("user_id", user.id),
+      admin.from("habits").delete().eq("user_id", user.id),
+      admin.from("sleep_logs").delete().eq("user_id", user.id),
+      admin.from("journal_entries").delete().eq("user_id", user.id),
       admin.from("sync_runs").delete().eq("user_id", user.id),
       admin.from("digest_deliveries").delete().eq("user_id", user.id),
       admin.from("integration_secrets").delete().in(

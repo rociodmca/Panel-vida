@@ -2,7 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { APP_URL, EMAIL_FROM, isDemoMode, isSupabaseConfigured } from "@/lib/config";
+import { localDayKey } from "@/lib/datetime";
 import { buildDigestEmail, type DigestData } from "@/lib/digest/build";
+import { phraseOfTheDay } from "@/lib/digest/phrase";
+import { fetchTodayWeather } from "@/lib/digest/weather";
 import { sendEmail } from "@/lib/email/sender";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { DigestPreferences } from "@/lib/types";
@@ -87,6 +90,9 @@ export async function previewDigest(): Promise<DigestActionState> {
 
   const { data: userData } = await supabase.auth.getUser();
 
+  // Clima real (mejor esfuerzo) y frase determinista, como en el cron.
+  const [weather] = await Promise.all([fetchTodayWeather()]);
+
   const data: DigestData = {
     displayName: userData.user?.user_metadata?.display_name ?? null,
     localDate: new Date(),
@@ -94,6 +100,8 @@ export async function previewDigest(): Promise<DigestActionState> {
     tasks: (tasksRes.data ?? []) as DigestData["tasks"],
     emails: (emailRes.data ?? []) as DigestData["emails"],
     integrationsAvailable: (eventsRes.data?.length ?? 0) > 0 || (emailRes.data?.length ?? 0) > 0,
+    weather,
+    phrase: phraseOfTheDay(localDayKey()),
   };
 
   const email = buildDigestEmail(data);

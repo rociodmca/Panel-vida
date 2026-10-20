@@ -66,6 +66,30 @@ describe("buildDigest (plantilla determinista)", () => {
     expect(text).toContain("- Nada vencido. Buen trabajo.");
     expect(text).not.toContain("Hecha ayer");
   });
+
+  it("omite clima y frase cuando no están presentes", () => {
+    const text = buildDigest(emptyData());
+    expect(text).not.toContain("CLIMA DE HOY");
+    expect(text).not.toContain("FRASE DEL DÍA");
+  });
+
+  it("incluye clima y frase cuando se proporcionan", () => {
+    const text = buildDigest(
+      emptyData({
+        weather: {
+          description: "Parcialmente nublado",
+          temperatureMaxC: 22,
+          temperatureMinC: 10,
+          precipitationProbabilityMax: 20,
+        },
+        phrase: "Avanza a tu ritmo, pero avanza.",
+      }),
+    );
+    expect(text).toContain("CLIMA DE HOY");
+    expect(text).toContain("Parcialmente nublado · máx 22 °C · mín 10 °C");
+    expect(text).toContain("FRASE DEL DÍA");
+    expect(text).toContain("Avanza a tu ritmo, pero avanza.");
+  });
 });
 
 describe("buildDigestEmail (HTML escapado)", () => {

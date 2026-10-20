@@ -20,6 +20,10 @@ export const EMAIL_PROVIDER = env.EMAIL_PROVIDER ?? "log";
 export const EMAIL_API_KEY = env.EMAIL_API_KEY ?? "";
 export const EMAIL_FROM = env.EMAIL_FROM ?? "";
 
+// Coordenadas del clima en el resumen matinal (por defecto: Madrid).
+export const DIGEST_WEATHER_LAT = env.DIGEST_WEATHER_LAT ?? "40.4168";
+export const DIGEST_WEATHER_LON = env.DIGEST_WEATHER_LON ?? "-3.7038";
+
 export const DEFAULT_TIMEZONE = "Europe/Madrid";
 export const DEFAULT_LOCALE = "es-ES";
 
