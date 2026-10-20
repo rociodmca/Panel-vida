@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Vendorizada por la skill impeccable (fuera del código de la app):
+    ".opencode/**",
+    "dev-server.log",
   ]),
 ]);
 

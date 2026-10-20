@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { CRON_SECRET, isDemoMode } from "@/lib/config";
 import { localDayKey, localTimeKey } from "@/lib/datetime";
 import { buildDigestEmail } from "@/lib/digest/build";
+import { shouldSendDigest, weekdayIndex } from "@/lib/digest/schedule";
 import { sendEmail } from "@/lib/email/sender";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import type { DigestPreferences } from "@/lib/types";
@@ -49,20 +50,13 @@ export async function GET(request: Request) {
     const prefs = row as DigestPreferences & { user_id: string; digest_email: string | null };
     if (!prefs.digest_enabled || !prefs.digest_email) continue;
 
-    const ahoraLocal = localTimeKey();
-    const horaActual = Number(ahoraLocal.slice(0, 2));
-    const horaDigest = Number(prefs.digest_local_time.slice(0, 2));
-    // Ventana tolerante: se envía si ya pasó la hora local del resumen hoy.
-    if (horaActual < horaDigest) continue;
-
-    const diaSemana = new Intl.DateTimeFormat("en-US", {
-      weekday: "short",
-      timeZone: "Europe/Madrid",
-    }).format(new Date());
-    const weekdayIndex: Record<string, number> = {
-      Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6, Sun: 7,
-    };
-    if (!prefs.digest_days?.includes(weekdayIndex[diaSemana] ?? 0)) continue;
+    const enviar = shouldSendDigest({
+      currentTimeKey: localTimeKey(),
+      digestLocalTime: prefs.digest_local_time,
+      digestDays: prefs.digest_days ?? [],
+      weekday: weekdayIndex(),
+    });
+    if (!enviar) continue;
 
     const localDate = localDayKey();
 

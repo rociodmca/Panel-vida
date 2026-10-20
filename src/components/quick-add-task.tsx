@@ -18,6 +18,7 @@ export function QuickAddTask() {
   const [notes, setNotes] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [priority, setPriority] = useState("media");
+  const [label, setLabel] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -31,6 +32,7 @@ export function QuickAddTask() {
       notes: notes || null,
       due_at,
       priority: priority as "baja" | "media" | "alta",
+      label: label.trim() || null,
     });
     setSaving(false);
     if (!result.ok) {
@@ -41,6 +43,7 @@ export function QuickAddTask() {
     setNotes("");
     setDueDate("");
     setPriority("media");
+    setLabel("");
     setOpen(false);
   }
 
@@ -121,6 +124,15 @@ export function QuickAddTask() {
               </Select>
             </Field>
           </div>
+          <Field id="qa-label" label="Etiqueta (opcional)" hint="p. ej. trabajo, casa, salud">
+            <Input
+              id="qa-label"
+              value={label}
+              onChange={(e) => setLabel(e.target.value)}
+              maxLength={40}
+              placeholder="trabajo"
+            />
+          </Field>
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setOpen(false)}>
               Cancelar

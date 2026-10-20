@@ -18,9 +18,19 @@ const filterLabels: Record<Filter, string> = {
   completadas: "Completadas",
 };
 
+export const LABEL_SUGGESTIONS = ["trabajo", "casa", "personal", "salud", "compras"];
+
 export function TasksSection({ compact = false }: { compact?: boolean }) {
-  const { tasks, loading, error, refresh, setCompleted, archiveTask, updateTask } =
-    useTasksContext();
+  const {
+    tasks,
+    loading,
+    error,
+    refresh,
+    setCompleted,
+    archiveTask,
+    updateTask,
+    deleteTask,
+  } = useTasksContext();
   const [filter, setFilter] = useState<Filter>(compact ? "hoy" : "pendientes");
   const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -69,23 +79,35 @@ export function TasksSection({ compact = false }: { compact?: boolean }) {
           description="Usa «Añadir tarea» para capturar algo rápido con fecha y prioridad."
         />
       ) : (
-        <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
-          {filtered.map((task) => (
-            <TaskRow
-              key={task.id}
-              task={task}
-              editing={editingId === task.id}
-              onEdit={() => setEditingId(task.id)}
-              onCancelEdit={() => setEditingId(null)}
-              onToggle={(completed) => void setCompleted(task.id, completed)}
-              onArchive={() => void archiveTask(task.id)}
-              onSave={async (patch) => {
-                await updateTask(task.id, patch);
-                setEditingId(null);
-              }}
-            />
-          ))}
-        </ul>
+        <>
+          <datalist id="etiquetas-comunes">
+            {LABEL_SUGGESTIONS.map((label) => (
+              <option key={label} value={label} />
+            ))}
+          </datalist>
+          <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
+            {filtered.map((task) => (
+              <TaskRow
+                key={task.id}
+                task={task}
+                editing={editingId === task.id}
+                onEdit={() => setEditingId(task.id)}
+                onCancelEdit={() => setEditingId(null)}
+                onToggle={(completed) => void setCompleted(task.id, completed)}
+                onArchive={() => void archiveTask(task.id)}
+                onDelete={async () => {
+                  const result = await deleteTask(task.id);
+                  if (result.ok) setEditingId(null);
+                  return result;
+                }}
+                onSave={async (patch) => {
+                  await updateTask(task.id, patch);
+                  setEditingId(null);
+                }}
+              />
+            ))}
+          </ul>
+        </>
       )}
     </div>
   );
@@ -109,6 +131,7 @@ function TaskRow({
   onCancelEdit,
   onToggle,
   onArchive,
+  onDelete,
   onSave,
 }: {
   task: Task;
@@ -117,6 +140,7 @@ function TaskRow({
   onCancelEdit: () => void;
   onToggle: (completed: boolean) => void;
   onArchive: () => void;
+  onDelete: () => Promise<{ ok: true } | { ok: false; error: string }>;
   onSave: (patch: Partial<Task>) => Promise<void>;
 }) {
   const [title, setTitle] = useState(task.title);
@@ -124,6 +148,9 @@ function TaskRow({
     task.due_at ? task.due_at.slice(0, 10) : "",
   );
   const [priority, setPriority] = useState<TaskPriority>(task.priority);
+  const [label, setLabel] = useState(task.label ?? "");
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const overdue = isOverdue(task.due_at, task.status);
   const completed = task.status === "completada";
 
@@ -138,6 +165,7 @@ function TaskRow({
               title,
               due_at: dueDate ? new Date(`${dueDate}T09:00:00`).toISOString() : null,
               priority,
+              label: label.trim() || null,
             });
           }}
         >
@@ -178,6 +206,19 @@ function TaskRow({
               <option value="alta">Alta</option>
             </Select>
           </div>
+          <div>
+            <label htmlFor={`edit-label-${task.id}`} className="sr-only">
+              Etiqueta
+            </label>
+            <Input
+              id={`edit-label-${task.id}`}
+              value={label}
+              onChange={(e) => setLabel(e.target.value)}
+              list="etiquetas-comunes"
+              maxLength={40}
+              placeholder="Etiqueta"
+            />
+          </div>
           <div className="flex gap-2">
             <Button type="submit" size="sm">
               Guardar
@@ -187,6 +228,11 @@ function TaskRow({
             </Button>
           </div>
         </form>
+        {deleteError && (
+          <p role="alert" className="mt-2 text-sm text-red-700 dark:text-red-300">
+            {deleteError}
+          </p>
+        )}
       </li>
     );
   }
@@ -219,16 +265,52 @@ function TaskRow({
           )}
           {task.label ? ` · ${task.label}` : ""}
         </p>
+        {deleteError && (
+          <p role="alert" className="mt-1 text-xs text-red-700 dark:text-red-300">
+            {deleteError}
+          </p>
+        )}
       </div>
       <PriorityBadge priority={task.priority} />
-      <div className="flex shrink-0 gap-1">
-        <Button variant="ghost" size="sm" onClick={onEdit}>
-          Editar
-        </Button>
-        {!completed && (
-          <Button variant="ghost" size="sm" onClick={onArchive}>
-            Archivar
-          </Button>
+      <div className="flex shrink-0 flex-wrap items-center justify-end gap-1">
+        {confirmingDelete ? (
+          <>
+            <span className="text-xs text-zinc-500 dark:text-zinc-400">¿Eliminar?</span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setDeleteError(null);
+                void onDelete().then((result) => {
+                  if (!result.ok) setDeleteError(result.error);
+                });
+              }}
+            >
+              Sí
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => setConfirmingDelete(false)}>
+              No
+            </Button>
+          </>
+        ) : (
+          <>
+            <Button variant="ghost" size="sm" onClick={onEdit}>
+              Editar
+            </Button>
+            {!completed && (
+              <Button variant="ghost" size="sm" onClick={onArchive}>
+                Archivar
+              </Button>
+            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-red-700 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
+              onClick={() => setConfirmingDelete(true)}
+            >
+              Eliminar
+            </Button>
+          </>
         )}
       </div>
     </li>
