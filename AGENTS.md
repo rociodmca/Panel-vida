@@ -93,16 +93,23 @@ Una persona que vive en España, usa Gmail y Google Calendar, tiene días con co
 ### P1 — valiosas si P0 está estable
 
 - Captura rápida de tarea desde cualquier pantalla y atajos de teclado.
+- Captura rápida de ideas o «brain dump»: nota libre de acceso inmediato, sin convertir el producto en un gestor de notas completo.
 - Etiquetas ligeras para tareas (p. ej., personal, casa, trabajo) sin taxonomía compleja.
 - Búsqueda unificada simple en tareas y datos ya sincronizados.
-- Notas breves del día o lista “algún día”, sin convertir el producto en un gestor de notas completo.
+- **Tracker de gimnasio básico** (ya implementado): registro diario de sesión con racha y vista semanal; ampliar a detalle de rutinas/series en P2.
+- **Hábitos diarios con rachas**: verificación diaria de hábitos personales (meditación, lectura, agua, suplementos…) con contador de rachas visuales, siguiendo el patrón del tracker de gimnasio. Un máximo de ~6 hábitos activos para mantener la interfaz tranquila.
 - PWA instalable y caché limitada de la interfaz; evitar caché offline de contenido sensible por defecto.
 - Reglas sencillas de relevancia del correo configurables (remitentes importantes, excluir newsletters).
 
 ### P2 — ideas posteriores, no comprometer el MVP
 
+- **Gimnasio avanzado**: planificador de rutinas (empuje/tirón/pierna/cardio), registro de series, repeticiones y pesos, historial y gráficos de progreso.
+- **Sueño y energía**: registro básico de horas de sueño y escala de energía al despertar (1-5); datos de salud personal, tratar con consentimiento explícito y minimización en RGPD.
+- **Modo enfoque / Pomodoro**: interfaz simplificada con la tarea actual y temporizador; reproducir sonido ambiente opcional.
+- **Micro-diario de cierre**: check-in nocturno breve (3 gratitudes + nota de reflexión), sin convertirlo en diario completo.
+- **Clima local y frase motivacional en el digest**: añadir contexto del día al resumen matinal; requiere API meteorológica y selección de frase determinista.
 - Finanzas personales con evaluación de proveedor, seguridad y alcance regulatorio antes de diseñar.
-- Integraciones adicionales (Outlook, Apple, tareas externas, tiempo meteorológico, transporte o festivos).
+- Integraciones adicionales (Outlook, Apple, tareas externas, transporte o festivos).
 - Acciones de calendario y correo con confirmación explícita.
 - Aplicación móvil nativa, colaboración, automatizaciones avanzadas y recomendaciones personales.
 
@@ -111,7 +118,7 @@ Una persona que vive en España, usa Gmail y Google Calendar, tiene días con co
 - Interfaz sobria y premium: tipografía legible, jerarquía clara, espacios generosos, bordes y sombras discretos, iconografía consistente.
 - Inspiración en la densidad y pulido de Linear y la claridad de Notion; crear identidad propia y no reutilizar sus assets ni replicar pantallas.
 - Navegación sugerida: **Hoy**, **Tareas**, **Correo**, **Calendario**, **Ajustes**. En móvil, navegación inferior o menú compacto.
-- En “Hoy”, priorizar: saludo/fecha local, resumen del día, siguiente evento, tareas prioritarias y correos que requieren acción.
+- En “Hoy”, priorizar: saludo/fecha local, resumen del día, siguiente evento, tareas prioritarias, correos que requieren acción y widgets de bienestar (gimnasio/hábitos) con rachas visibles.
 - Diferenciar contenido sincronizado de contenido creado en la app y mostrar la hora de actualización.
 - Estados de carga con skeletons, errores con una acción de recuperación, estados vacíos con siguiente paso concreto.
 - Reducir movimiento; respetar `prefers-reduced-motion`; no depender solo del color para comunicar prioridad.
@@ -278,6 +285,7 @@ Usar UUID, `created_at`/`updated_at` UTC y `user_id` en toda fila personal. Aña
 Esto es una guía de diseño y no sustituye una revisión legal antes de ofrecer el servicio públicamente.
 
 - Aplicar minimización: sincronizar solo datos que habilitan funciones visibles; evitar almacenar cuerpos completos y adjuntos.
+- Los datos de salud y bienestar (sueño, energía, hábitos) son datos personales sensibles: exigir consentimiento explícito y granular, permitir borrado individual por categoría y no inferir ni derivar conclusiones de salud a partir de ellos.
 - Informar de responsable, finalidades, bases jurídicas, proveedores/encargados, transferencias internacionales, conservación, derechos y contacto antes de conectar servicios.
 - Obtener consentimiento/acción afirmativa clara para conectar Google y para enviar contenido a IA cloud; granularidad y revocación sencilla.
 - Definir contrato y configuración de tratamiento con Supabase, Vercel, email e IA; revisar región de alojamiento y transferencias internacionales aplicables.
@@ -365,7 +373,10 @@ No incluir `.env.local` en Git. Añadir los secretos a Vercel y al entorno local
 
 ### Fase posterior — candidata
 
+- Gimnasio avanzado (rutinas, series, gráficos), hábitos, sueño/energía, modo enfoque y micro-diario.
 - Finanzas personales, otras integraciones, escritura en Calendar/Gmail, colaboración y automatizaciones. Cada una requiere alcance, consentimiento y evaluación de seguridad propios.
+
+> Referencia de inspiración: `propuesta_de_proyecto_panel_de_vida.md` (fuera de este repositorio). No implica compromiso de implementación.
 
 ## 16. Instrucciones de despliegue
 
