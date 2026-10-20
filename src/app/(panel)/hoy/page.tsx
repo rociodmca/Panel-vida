@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { connection } from "next/server";
+import { GymTracker } from "@/components/gym-tracker";
 import { TasksSection } from "@/components/tasks-section";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/states";
+import { getGymStatus } from "@/lib/data/gym";
 import { getRecentEmails, getUpcomingEvents } from "@/lib/data/dashboard";
 import {
   currentGreeting,
@@ -19,7 +21,11 @@ export const instant = false;
 
 export default async function HoyPage() {
   await connection();
-  const [events, emails] = await Promise.all([getUpcomingEvents(10), getRecentEmails(5)]);
+  const [events, emails, gym] = await Promise.all([
+    getUpcomingEvents(10),
+    getRecentEmails(5),
+    getGymStatus(),
+  ]);
   const todayEvents = events.filter((event) => isToday(event.starts_at));
   const importantEmails = emails.filter((mail) => mail.is_important || mail.is_unread);
 
@@ -125,10 +131,31 @@ export default async function HoyPage() {
                     </span>
                   </div>
                   <p className="mt-1 truncate text-sm font-medium text-zinc-900 dark:text-zinc-100">
-                    {mail.subject}
+                    {mail.external_url ? (
+                      <a
+                        href={mail.external_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="hover:underline"
+                      >
+                        {mail.subject}
+                      </a>
+                    ) : (
+                      mail.subject
+                    )}
                   </p>
                   <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">
                     {mail.sender_name ?? mail.sender_email}
+                    {mail.external_url && (
+                      <a
+                        href={mail.external_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="ml-1.5 font-medium text-teal-800 underline dark:text-teal-200"
+                      >
+                        Abrir en Gmail
+                      </a>
+                    )}
                   </p>
                 </li>
               ))}
@@ -137,20 +164,26 @@ export default async function HoyPage() {
         </Card>
       </div>
 
-      <Card
-        title="Tareas"
-        description="Lo más urgente de hoy y lo que está vencido."
-        action={
-          <Link
-            href="/tareas"
-            className="text-sm font-medium text-teal-800 underline hover:text-teal-900 dark:text-teal-200"
-          >
-            Ver todas
-          </Link>
-        }
-      >
-        <TasksSection compact />
-      </Card>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card
+          title="Tareas"
+          description="Lo más urgente de hoy y lo que está vencido."
+          action={
+            <Link
+              href="/tareas"
+              className="text-sm font-medium text-teal-800 underline hover:text-teal-900 dark:text-teal-200"
+            >
+              Ver todas
+            </Link>
+          }
+        >
+          <TasksSection compact />
+        </Card>
+
+        <Card title="Gimnasio" description="Registro diario y racha de la semana.">
+          <GymTracker status={gym} demoMode={isDemoMode()} />
+        </Card>
+      </div>
     </div>
   );
 }

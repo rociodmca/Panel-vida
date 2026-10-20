@@ -23,6 +23,7 @@ const EXPORTABLE_TABLES = [
   "email_items_cache",
   "tasks",
   "notes",
+  "gym_sessions",
   "digest_deliveries",
   "sync_runs",
 ] as const;
@@ -88,6 +89,7 @@ export async function deleteAccountData(): Promise<DataActionState> {
       admin.from("events_cache").delete().eq("user_id", user.id),
       admin.from("email_items_cache").delete().eq("user_id", user.id),
       admin.from("calendar_sources").delete().eq("user_id", user.id),
+      admin.from("gym_sessions").delete().eq("user_id", user.id),
       admin.from("sync_runs").delete().eq("user_id", user.id),
       admin.from("digest_deliveries").delete().eq("user_id", user.id),
       admin.from("integration_secrets").delete().in(
