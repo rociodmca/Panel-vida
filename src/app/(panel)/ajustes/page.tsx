@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
+import { DataControls } from "@/components/data-controls";
 import { DigestActions, DigestSettingsForm } from "@/components/digest-settings";
 import { IntegrationsPanel } from "@/components/integrations-panel";
 import { LogoutButton } from "@/components/logout-button";
@@ -153,12 +154,13 @@ export default async function AjustesPage({
             </Link>{" "}
             para ver qué datos se tratan y cómo ejercer tus derechos.
           </li>
-          <li>
-            · Exportación y eliminación completa de la cuenta: en el MVP se
-            realiza eliminando la cuenta desde Supabase Auth; queda señalado
-            como pendiente de automatizar.
-          </li>
         </ul>
+        <div className="mt-4 border-t border-zinc-200 pt-4 dark:border-zinc-800">
+          <h3 className="mb-3 text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+            Exportar o eliminar
+          </h3>
+          <DataControls demoMode={isDemoMode()} />
+        </div>
         <p className="mt-4 text-xs text-zinc-500 dark:text-zinc-400">
           URL de la app para callbacks OAuth: {APP_URL}
         </p>

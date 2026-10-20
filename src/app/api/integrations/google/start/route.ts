@@ -9,6 +9,10 @@ import {
   GMAIL_SCOPES,
   googleProvider,
 } from "@/lib/integrations/google/provider";
+import {
+  computePkceChallenge,
+  generatePkceVerifier,
+} from "@/lib/integrations/crypto";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
 
@@ -39,29 +43,25 @@ export async function GET(request: NextRequest) {
         : GOOGLE_CALENDAR_SCOPES;
 
   const state = crypto.randomUUID();
+  const codeVerifier = generatePkceVerifier();
   const cookieStore = await cookies();
-  cookieStore.set("oauth_state", state, {
+  const cookieOptions = {
     httpOnly: true,
-    sameSite: "lax",
+    sameSite: "lax" as const,
     secure: process.env.NODE_ENV === "production",
     maxAge: 60 * 10,
     path: "/",
-  });
-  cookieStore.set("oauth_user", user.id, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    maxAge: 60 * 10,
-    path: "/",
-  });
-  cookieStore.set("oauth_target", target, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    maxAge: 60 * 10,
-    path: "/",
-  });
+  };
+  cookieStore.set("oauth_state", state, cookieOptions);
+  cookieStore.set("oauth_user", user.id, cookieOptions);
+  cookieStore.set("oauth_target", target, cookieOptions);
+  cookieStore.set("oauth_pkce_verifier", codeVerifier, cookieOptions);
 
-  const url = googleProvider.buildAuthUrl(CALLBACK_URL, state, scopes);
+  const url = googleProvider.buildAuthUrl(
+    CALLBACK_URL,
+    state,
+    scopes,
+    computePkceChallenge(codeVerifier),
+  );
   return NextResponse.redirect(url);
 }

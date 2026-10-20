@@ -12,6 +12,10 @@ export const CRON_SECRET = env.CRON_SECRET ?? "";
 export const GOOGLE_CLIENT_ID = env.GOOGLE_CLIENT_ID ?? "";
 export const GOOGLE_CLIENT_SECRET = env.GOOGLE_CLIENT_SECRET ?? "";
 
+// Cifrado AES-256-GCM de tokens OAuth en reposo (solo servidor).
+// Base64 de exactamente 32 bytes. Genera una con: openssl rand -base64 32
+export const TOKEN_ENCRYPTION_KEY = env.TOKEN_ENCRYPTION_KEY ?? "";
+
 export const EMAIL_PROVIDER = env.EMAIL_PROVIDER ?? "log";
 export const EMAIL_API_KEY = env.EMAIL_API_KEY ?? "";
 export const EMAIL_FROM = env.EMAIL_FROM ?? "";

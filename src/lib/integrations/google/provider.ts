@@ -23,7 +23,7 @@ function ensureConfigured() {
 export const googleProvider: ProviderAdapter = {
   name: "google",
 
-  buildAuthUrl(redirectUri, state, scopes) {
+  buildAuthUrl(redirectUri, state, scopes, codeChallenge) {
     ensureConfigured();
     const url = new URL(AUTH_ENDPOINT);
     url.searchParams.set("client_id", GOOGLE_CLIENT_ID);
@@ -31,13 +31,15 @@ export const googleProvider: ProviderAdapter = {
     url.searchParams.set("response_type", "code");
     url.searchParams.set("scope", scopes.join(" "));
     url.searchParams.set("state", state);
+    url.searchParams.set("code_challenge", codeChallenge);
+    url.searchParams.set("code_challenge_method", "S256");
     url.searchParams.set("access_type", "offline");
     url.searchParams.set("prompt", "consent");
     url.searchParams.set("include_granted_scopes", "true");
     return url.toString();
   },
 
-  async exchangeCode(code, redirectUri): Promise<OAuthTokens> {
+  async exchangeCode(code, redirectUri, codeVerifier): Promise<OAuthTokens> {
     ensureConfigured();
     const response = await fetch(TOKEN_ENDPOINT, {
       method: "POST",
@@ -47,6 +49,7 @@ export const googleProvider: ProviderAdapter = {
         client_id: GOOGLE_CLIENT_ID,
         client_secret: GOOGLE_CLIENT_SECRET,
         redirect_uri: redirectUri,
+        code_verifier: codeVerifier,
         grant_type: "authorization_code",
       }),
     });

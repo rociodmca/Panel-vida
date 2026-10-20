@@ -4,6 +4,10 @@ import { listCalendars, listUpcomingEvents } from "@/lib/integrations/google/cal
 import { listRecentMessageMetadata } from "@/lib/integrations/google/gmail";
 import { googleProvider } from "@/lib/integrations/google/provider";
 import {
+  encryptSecret,
+  hasTokenEncryptionKey,
+} from "@/lib/integrations/crypto";
+import {
   listIntegrations,
   markSyncResult,
   upsertIntegration,
@@ -24,6 +28,7 @@ export async function GET(request: NextRequest) {
   const expectedState = cookieStore.get("oauth_state")?.value;
   const userId = cookieStore.get("oauth_user")?.value;
   const target = cookieStore.get("oauth_target")?.value ?? "google_calendar";
+  const codeVerifier = cookieStore.get("oauth_pkce_verifier")?.value;
 
   const code = request.nextUrl.searchParams.get("code");
   const state = request.nextUrl.searchParams.get("state");
@@ -34,14 +39,17 @@ export async function GET(request: NextRequest) {
 
   if (oauthError) return fail("denegado");
   if (!code || !state || !expectedState || state !== expectedState) return fail("state");
+  if (!codeVerifier) return fail("pkce");
   if (!userId) return fail("sesion");
+  if (!hasTokenEncryptionKey()) return fail("config_clave_cifrado");
 
   cookieStore.delete("oauth_state");
   cookieStore.delete("oauth_user");
   cookieStore.delete("oauth_target");
+  cookieStore.delete("oauth_pkce_verifier");
 
   try {
-    const tokens = await googleProvider.exchangeCode(code, CALLBACK_URL);
+    const tokens = await googleProvider.exchangeCode(code, CALLBACK_URL, codeVerifier);
     const profile = await googleProvider.fetchProfile(tokens.accessToken);
 
     const provider =
@@ -52,8 +60,9 @@ export async function GET(request: NextRequest) {
       provider,
       providerAccountId: profile.providerAccountId,
       scopes: (tokens.scope ?? "").split(" ").filter(Boolean),
-      // En producción, cifrar con clave de servidor (p. ej. Supabase Vault).
-      encryptedRefreshToken: tokens.refreshToken ?? "",
+      encryptedRefreshToken: tokens.refreshToken
+        ? encryptSecret(tokens.refreshToken)
+        : "",
     });
     if (error) return fail("guardado");
 

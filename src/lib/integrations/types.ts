@@ -36,8 +36,17 @@ export interface EmailMetaDraft {
 
 export interface ProviderAdapter {
   name: string;
-  buildAuthUrl(redirectUri: string, state: string, scopes: string[]): string;
-  exchangeCode(code: string, redirectUri: string): Promise<OAuthTokens>;
+  buildAuthUrl(
+    redirectUri: string,
+    state: string,
+    scopes: string[],
+    codeChallenge: string,
+  ): string;
+  exchangeCode(
+    code: string,
+    redirectUri: string,
+    codeVerifier: string,
+  ): Promise<OAuthTokens>;
   refreshAccessToken(refreshToken: string): Promise<OAuthTokens>;
   fetchProfile(accessToken: string): Promise<ConnectedAccount>;
   /** Revoca el token en el proveedor cuando es posible. */
