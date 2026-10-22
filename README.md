@@ -47,7 +47,9 @@ fragmento, motivo de relevancia y enlace para abrirlo en Gmail).
 - Navegación responsive (Hoy, Agenda, Tareas, Ajustes) con barra inferior en móvil.
 - Dashboard «Hoy»: agenda del día, correo reciente (metadatos) y resumen.
 - Resumen de cada correo con IA bajo demanda (o con plantilla determinista si no
-  hay proveedor configurado), con consentimiento revocable.
+  hay proveedor configurado), con consentimiento revocable. Si no se puede leer
+  el cuerpo en Gmail (sin conexión o sin permiso), se resume el fragmento ya
+  sincronizado y la interfaz lo advierte.
 - Tareas: crear, editar, completar, reabrir, archivar; prioridad, fecha y etiqueta;
   captura rápida desde cualquier pantalla.
 - Agenda de 7 días con origen del calendario y enlace al proveedor.

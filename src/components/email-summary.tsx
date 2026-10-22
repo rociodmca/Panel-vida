@@ -77,6 +77,11 @@ export function EmailSummaryButton({ messageId }: { messageId: string }) {
             {sourceLabel(summary)}
             {summary.requiere_accion ? " · parece pedir una acción" : ""}
           </p>
+          {state.notice && (
+            <p className="text-[11px] text-amber-700 dark:text-amber-400">
+              {state.notice}
+            </p>
+          )}
         </div>
       )}
 

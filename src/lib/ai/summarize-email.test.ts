@@ -108,6 +108,22 @@ describe("resumen determinista", () => {
   });
 });
 
+describe("correo solo con fragmento", () => {
+  it("avisa al modelo de que no invente datos", () => {
+    const prompt = buildSummaryPrompt({
+      ...correo,
+      body: "Tu factura de 68,40 € vence el día 27.",
+      fragmentOnly: true,
+    });
+    expect(prompt).toContain("fragmento inicial");
+    expect(prompt).toContain("no inventes datos");
+  });
+
+  it("no añade el aviso cuando hay cuerpo completo", () => {
+    expect(buildSummaryPrompt(correo)).not.toContain("fragmento inicial");
+  });
+});
+
 describe("orquestación", () => {
   it("usa el proveedor cuando está permitido y responde bien", async () => {
     const resumen = await summarizeEmail(correo, {

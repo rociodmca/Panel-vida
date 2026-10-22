@@ -84,7 +84,11 @@ export async function resolveGoogleToken(
     if (refresh.ok) {
       integrationToken = refresh.accessToken;
       scopes = integration.scopes ?? [];
-    } else if (refresh.reason === "credencial_invalida") {
+    } else if (
+      refresh.reason === "sin_credencial" ||
+      refresh.reason === "credencial_invalida"
+    ) {
+      // Hay conexión registrada pero no hay secreto utilizable: reconectar.
       integrationError = "credencial_invalida";
     } else if (refresh.reason === "clave_ausente") {
       integrationError = "error";

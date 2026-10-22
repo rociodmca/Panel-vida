@@ -13,6 +13,8 @@ export interface EmailToSummarize {
   subject: string;
   from: string;
   body: string;
+  /** true cuando `body` es solo el fragmento sincronizado, no el cuerpo completo. */
+  fragmentOnly?: boolean;
 }
 
 const MAX_RESUMEN_CHARS = 400;
@@ -54,6 +56,11 @@ const NOISE_LINES = [
 export function buildSummaryPrompt(email: EmailToSummarize): string {
   return [
     "Resume este correo.",
+    ...(email.fragmentOnly
+      ? [
+          "Solo tienes el fragmento inicial del correo: no inventes datos, importes ni fechas que no aparezcan.",
+        ]
+      : []),
     "<correo>",
     `Asunto: ${email.subject}`,
     `De: ${email.from}`,

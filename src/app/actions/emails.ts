@@ -16,15 +16,18 @@ export interface EmailActionState {
   summary?: EmailSummary;
   /** Identificador del correo resumido, para pintar el resultado en su sitio. */
   messageId?: string;
+  /** Aviso honesto cuando el resumen se hizo sin el cuerpo completo. */
+  notice?: string;
 }
 
 /**
  * Resumen de un correo con IA (o con la plantilla determinista).
  *
  * El cuerpo del mensaje se pide a Gmail en el momento, se recorta y no se
- * guarda: a la base de datos solo llega el resumen. La búsqueda del mensaje
- * se hace con el usuario de la sesión, así que nobody puede resumir el
- * correo de otra persona.
+ * guarda: a la base de datos solo llega el resumen. Si no hay credencial de
+ * Gmail o la lectura falla, se usa el fragmento ya sincronizado y se avisa.
+ * La búsqueda del mensaje se hace con el usuario de la sesión, así que nadie
+ * puede resumir el correo de otra persona.
  */
 export async function summarizeEmailAction(
   _prev: EmailActionState,
@@ -44,7 +47,7 @@ export async function summarizeEmailAction(
   // RLS: solo se ven los correos del usuario de la sesión.
   const { data: message } = await supabase
     .from("email_items_cache")
-    .select("external_id, subject, sender_name, sender_email")
+    .select("external_id, subject, sender_name, sender_email, snippet")
     .eq("external_id", messageId)
     .limit(1)
     .maybeSingle();
@@ -58,30 +61,50 @@ export async function summarizeEmailAction(
     .maybeSingle();
   const aiEnabled = preferences?.ai_enabled !== false;
 
+  // Se intenta leer el cuerpo completo en Gmail. Si no hay credencial válida o
+  // la lectura falla, se resume el fragmento ya sincronizado y se avisa: es
+  // preferible a bloquear la función y no envía datos nuevos a nadie.
   const token = await resolveGoogleToken(user.id, "gmail");
-  if (!token.ok) {
+  let subject = message.subject ?? "";
+  let from = message.sender_name || message.sender_email || "";
+  let body = message.snippet?.trim() ?? "";
+  let fragmentOnly = true;
+  let notice: string | undefined;
+
+  if (token.ok) {
+    try {
+      const content = await fetchMessageContent(token.token, messageId);
+      subject = content.subject || subject;
+      from = content.from || from;
+      if (content.body.trim()) {
+        body = content.body;
+        fragmentOnly = false;
+      } else if (body) {
+        notice =
+          "El correo llegó sin texto legible; el resumen usa el fragmento sincronizado.";
+      }
+    } catch (error) {
+      if (
+        error instanceof GmailApiError &&
+        (error.status === 403 || error.status === 401)
+      ) {
+        notice =
+          "Gmail no permitió leer el cuerpo con los permisos actuales. El resumen usa el fragmento sincronizado; vuelve a conectar la cuenta para el texto completo.";
+      } else if (body) {
+        notice =
+          "No se pudo leer el cuerpo desde Gmail. El resumen usa el fragmento sincronizado.";
+      } else {
+        return { error: "No se pudo leer el correo desde Gmail. Inténtalo de nuevo." };
+      }
+    }
+  } else if (body) {
+    notice = `${tokenErrorMessage(token.reason)} Mientras tanto, el resumen se hace con el fragmento sincronizado.`;
+  } else {
     return { error: tokenErrorMessage(token.reason) };
   }
 
-  let content;
-  try {
-    content = await fetchMessageContent(token.token, messageId);
-  } catch (error) {
-    if (error instanceof GmailApiError && (error.status === 403 || error.status === 401)) {
-      return {
-        error:
-          "Tu conexión de Gmail no permite leer el contenido. Vuelve a conectar la cuenta con los permisos de lectura.",
-      };
-    }
-    return { error: "No se pudo leer el correo desde Gmail. Inténtalo de nuevo." };
-  }
-
   const summary = await summarizeEmail(
-    {
-      subject: content.subject || message.subject,
-      from: content.from || message.sender_name || message.sender_email,
-      body: content.body,
-    },
+    { subject, from, body, fragmentOnly },
     { aiEnabled },
   );
 
@@ -93,6 +116,7 @@ export async function summarizeEmailAction(
       provider_configured: Boolean(getAiProvider()),
       source: summary.fuente,
       reason: summary.motivo ?? null,
+      body_source: fragmentOnly ? "fragmento" : "gmail",
     }),
   );
 
@@ -114,11 +138,12 @@ export async function summarizeEmailAction(
     return {
       summary,
       messageId,
+      notice,
       error:
         "El resumen se generó pero no se pudo guardar (¿falta la migración 0005?).",
     };
   }
-  return { summary, messageId };
+  return { summary, messageId, notice };
 }
 
 function tokenErrorMessage(reason: string): string {
