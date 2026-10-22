@@ -70,12 +70,22 @@ export function parseAiSummary(raw: string): EmailSummary | null {
     .replace(/^```(?:json)?/i, "")
     .replace(/```$/, "")
     .trim();
-  const data = parseJsonObject(cleaned);
-  if (!data || typeof data !== "object") return null;
+  let data = parseJsonObject(cleaned);
+  if (!data || typeof data !== "object") {
+    // Recuperación tolerante: JSON truncado o con comas finales.
+    data = extractFields(cleaned);
+  }
+  if (!data || typeof data !== "object") {
+    logUnparsedResponse(cleaned);
+    return null;
+  }
   const record = data as Record<string, unknown>;
 
   const resumen = typeof record.resumen === "string" ? record.resumen.trim() : "";
-  if (!resumen) return null;
+  if (!resumen) {
+    logUnparsedResponse(cleaned);
+    return null;
+  }
 
   const puntos = Array.isArray(record.puntos)
     ? record.puntos
@@ -108,6 +118,68 @@ export function parseAiSummary(raw: string): EmailSummary | null {
 function truncate(value: string, max: number): string {
   if (value.length <= max) return value;
   return `${value.slice(0, max - 1).trimEnd()}…`;
+}
+
+/**
+ * Último recurso cuando la respuesta no es JSON válido (p. ej. truncada por
+ * el límite de tokens): se leen los campos con expresiones regulares.
+ */
+function extractFields(text: string): Record<string, unknown> | null {
+  const resumen = matchString(text, "resumen");
+  if (!resumen) return null;
+  return {
+    resumen,
+    puntos: matchStringArray(text, "puntos"),
+    tareas: matchStringArray(text, "tareas"),
+    requiere_accion: /"requiere_accion"\s*:\s*true/.test(text),
+  };
+}
+
+function matchString(text: string, field: string): string | null {
+  const regex = new RegExp(`"${field}"\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)"`);
+  const match = regex.exec(text);
+  if (!match) return null;
+  const value = match[1].replace(/\\"/g, '"').replace(/\\n/g, " ").trim();
+  return value || null;
+}
+
+function matchStringArray(text: string, field: string): string[] {
+  const regex = new RegExp(`"${field}"\\s*:\\s*\\[([\\s\\S]*?)\\]`);
+  const match = regex.exec(text);
+  if (!match) return [];
+  return [...match[1].matchAll(/"((?:[^"\\\\]|\\\\.)*)"/g)]
+    .map((item) => item[1].replace(/\\"/g, '"').trim())
+    .filter(Boolean);
+}
+
+/**
+ * Diagnóstico sin contenido: solo forma de la respuesta, para saber si el
+ * proveedor devolvió prosa, JSON truncado u otra estructura.
+ */
+function logUnparsedResponse(text: string): void {
+  let parsedShape: string | null = null;
+  try {
+    const parsed = JSON.parse(text) as unknown;
+    parsedShape =
+      parsed && typeof parsed === "object" && !Array.isArray(parsed)
+        ? Object.keys(parsed as Record<string, unknown>).join(",")
+        : Array.isArray(parsed)
+          ? "array"
+          : typeof parsed;
+  } catch {
+    parsedShape = null;
+  }
+  console.warn(
+    JSON.stringify({
+      event: "ai_summary_unparsed",
+      length: text.length,
+      starts_with_brace: text.startsWith("{"),
+      ends_with_brace: text.endsWith("}"),
+      has_fence: text.includes("```"),
+      parse_ok: parsedShape !== null,
+      keys: parsedShape,
+    }),
+  );
 }
 
 /**

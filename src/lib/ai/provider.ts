@@ -23,10 +23,10 @@ import type { AiProvider } from "@/lib/ai/types";
  *    determinista.
  */
 
-const MAX_OUTPUT_TOKENS = 800;
+const MAX_OUTPUT_TOKENS = 2048;
 // El segundo intento deja más margen por si el modelo consume tokens en
 // razonamiento interno antes de responder.
-const MAX_OUTPUT_TOKENS_FALLBACK = 2048;
+const MAX_OUTPUT_TOKENS_FALLBACK = 4096;
 
 export const EMAIL_SUMMARY_SYSTEM_PROMPT = [
   "Eres un asistente que resume correos para su dueño.",

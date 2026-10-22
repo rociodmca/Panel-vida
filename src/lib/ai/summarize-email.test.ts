@@ -66,6 +66,19 @@ describe("validación de la respuesta del modelo", () => {
     expect(parsed?.fuente).toBe("ia");
   });
 
+  it("recupera campos si la respuesta no es JSON válido", () => {
+    const parsed = parseAiSummary(
+      '{"resumen":"Truncado a la mitad","puntos":["uno","dos"],"tareas":[]',
+    );
+    expect(parsed?.resumen).toBe("Truncado a la mitad");
+    expect(parsed?.puntos).toEqual(["uno", "dos"]);
+    expect(parsed?.fuente).toBe("ia");
+  });
+
+  it("no inventa un resumen si la respuesta es solo prosa", () => {
+    expect(parseAiSummary("Aquí tienes el resumen de tu correo, sin JSON.")).toBeNull();
+  });
+
   it("ignora campos que no son texto", () => {
     const parsed = parseAiSummary(
       '{"resumen":"Bien","puntos":["uno",2,null],"tareas":[3],"requiere_accion":"sí"}',
