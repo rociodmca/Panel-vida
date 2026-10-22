@@ -64,7 +64,7 @@ export async function logout(): Promise<void> {
   const supabase = await createSupabaseServerClient();
   if (supabase) await supabase.auth.signOut();
   revalidatePath("/", "layout");
-  redirect("/login");
+  redirect("/login?sesion=cerrada");
 }
 
 /**

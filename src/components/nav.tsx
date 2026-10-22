@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { LogoutButton } from "@/components/logout-button";
 
 interface NavItem {
   href: string;
@@ -21,7 +22,7 @@ const items: NavItem[] = [
   { href: "/ajustes", label: "Ajustes", icon: SettingsIcon },
 ];
 
-export function Nav() {
+export function Nav({ canLogout = false }: { canLogout?: boolean }) {
   const pathname = usePathname();
   const mobileItems = items.filter((item) => !item.desktopOnly);
 
@@ -59,9 +60,16 @@ export function Nav() {
             );
           })}
         </ul>
-        <p className="text-xs text-zinc-500 dark:text-zinc-400">
-          Zona horaria: Europa/Madrid
-        </p>
+        <div className="border-t border-zinc-200 pt-3 dark:border-zinc-800">
+          <p className="px-3 text-xs text-zinc-500 dark:text-zinc-400">
+            Zona horaria: Europa/Madrid
+          </p>
+          {canLogout && (
+            <div className="mt-1">
+              <LogoutButton variant="ghost" />
+            </div>
+          )}
+        </div>
       </nav>
 
       {/* Móvil */}

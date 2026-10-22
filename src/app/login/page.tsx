@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { connection } from "next/server";
 import { LoginForm } from "@/components/login-form";
+import { FormSuccess } from "@/components/ui/form";
 import { isDemoMode } from "@/lib/config";
 import { isGoogleAuthEnabled } from "@/lib/supabase/providers";
 import type { Metadata } from "next";
@@ -17,13 +18,15 @@ const ERROR_MESSAGES: Record<string, string> = {
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; sesion?: string }>;
 }) {
   // El estado del proveedor de Google se consulta en Supabase: la página se
   // resuelve en cada visita, no se prerenderiza.
   await connection();
-  const errorKey = (await searchParams).error ?? "";
+  const params = await searchParams;
+  const errorKey = params.error ?? "";
   const errorMessage = ERROR_MESSAGES[errorKey];
+  const sessionClosed = params.sesion === "cerrada";
   const googleEnabled = !isDemoMode() && (await isGoogleAuthEnabled());
 
   if (isDemoMode()) {
@@ -61,6 +64,9 @@ export default async function LoginPage({
           >
             {errorMessage}
           </p>
+        )}
+        {sessionClosed && (
+          <FormSuccess message="Has cerrado la sesión correctamente." />
         )}
         <LoginForm googleEnabled={googleEnabled} />
       </div>

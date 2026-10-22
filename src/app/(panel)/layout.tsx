@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { Nav } from "@/components/nav";
+import { LogoutButton } from "@/components/logout-button";
 import { QuickAddTask } from "@/components/quick-add-task";
 import { TasksProvider } from "@/components/tasks-provider";
 import { isDemoMode } from "@/lib/config";
@@ -9,7 +10,8 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export default async function PanelLayout({ children }: { children: React.ReactNode }) {
   await connection();
-  if (!isDemoMode()) {
+  const demo = isDemoMode();
+  if (!demo) {
     const supabase = await createSupabaseServerClient();
     const { data } = await supabase!.auth.getUser();
     if (!data.user) redirect("/login");
@@ -18,8 +20,17 @@ export default async function PanelLayout({ children }: { children: React.ReactN
   return (
     <TasksProvider>
       <div className="min-h-dvh">
-        <Nav />
-        {isDemoMode() && (
+        <Nav canLogout={!demo} />
+        <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-zinc-200 bg-white/85 px-4 py-2 backdrop-blur-md md:hidden dark:border-zinc-800 dark:bg-zinc-950/85">
+          <Link
+            href="/hoy"
+            className="truncate text-sm font-semibold text-zinc-900 dark:text-zinc-50"
+          >
+            Panel de vida
+          </Link>
+          {!demo && <LogoutButton variant="icon" />}
+        </header>
+        {demo && (
           <div
             role="note"
             className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-center text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-100"
