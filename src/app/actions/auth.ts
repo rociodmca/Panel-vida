@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { APP_URL, GOOGLE_LOGIN_EXTRA_SCOPES } from "@/lib/config";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export interface AuthFormState {
@@ -64,4 +65,28 @@ export async function logout(): Promise<void> {
   if (supabase) await supabase.auth.signOut();
   revalidatePath("/", "layout");
   redirect("/login");
+}
+
+/**
+ * Inicia sesión con Google usando el proveedor de Supabase.
+ * Requiere activar el proveedor Google en Supabase (Authentication → Providers)
+ * con el mismo cliente OAuth de Google Cloud que usa la app.
+ */
+export async function loginWithGoogle(): Promise<void> {
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) redirect("/login?error=supabase");
+
+  const scopes = ["openid", "email", "profile", ...GOOGLE_LOGIN_EXTRA_SCOPES];
+
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      redirectTo: `${APP_URL}/hoy`,
+      skipBrowserRedirect: true,
+      scopes: scopes.join(" "),
+    },
+  });
+
+  if (error || !data?.url) redirect("/login?error=google");
+  redirect(data.url);
 }

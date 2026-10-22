@@ -28,9 +28,13 @@ export interface EmailMetaDraft {
   senderName: string | null;
   senderEmail: string;
   subject: string;
+  /** Vista previa corta (snippet). Nunca el cuerpo completo. */
+  snippet: string | null;
   receivedAt: string;
   isUnread: boolean;
   isImportant: boolean;
+  relevanceScore: number;
+  relevanceReason: string;
   externalUrl: string | null;
 }
 

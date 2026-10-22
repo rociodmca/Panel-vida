@@ -74,9 +74,13 @@ export const DEMO_EMAILS: EmailItem[] = [
     sender_name: "Ayuntamiento",
     sender_email: "notificaciones@ayuntamiento.example",
     subject: "Recordatorio: cita para trámite municipal",
+    snippet:
+      "Le informamos de que su cita para el trámite municipal está confirmada. Acuda con documento de identidad.",
     received_at: atHour(0, 8, 12),
     is_unread: true,
     is_important: true,
+    relevance_reason: "Marcado como importante",
+    relevance_score: 1,
     external_url: "https://mail.google.com",
   },
   {
@@ -84,9 +88,13 @@ export const DEMO_EMAILS: EmailItem[] = [
     sender_name: "Compañía de seguros",
     sender_email: "avisos@seguros.example",
     subject: "Renovación de póliza pendiente de confirmación",
+    snippet:
+      "Su póliza vence el mes que viene. Confirme la renovación desde el área de clientes.",
     received_at: atHour(0, 7, 45),
     is_unread: true,
     is_important: false,
+    relevance_reason: "No leído",
+    relevance_score: 0.7,
     external_url: "https://mail.google.com",
   },
   {
@@ -94,9 +102,13 @@ export const DEMO_EMAILS: EmailItem[] = [
     sender_name: "Biblioteca",
     sender_email: "biblioteca@example",
     subject: "Devolución próxima: «La sombra del viento»",
+    snippet:
+      "Recuerda que la devolución del préstamo está prevista para mañana. Puedes renovar en línea.",
     received_at: atHour(1, 19, 3),
     is_unread: false,
     is_important: false,
+    relevance_reason: "Reciente",
+    relevance_score: 0.4,
     external_url: "https://mail.google.com",
   },
 ];

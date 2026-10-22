@@ -9,11 +9,13 @@ import { Card } from "@/components/ui/card";
 import {
   APP_URL,
   DEFAULT_TIMEZONE,
+  GOOGLE_REDIRECT_URI,
   isDemoMode,
   isGoogleConfigured,
 } from "@/lib/config";
 import { listIntegrations } from "@/lib/integrations/repository";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getAdminStatus, type AdminStatus } from "@/lib/supabase/health";
 import {
   DEFAULT_DIGEST_PREFERENCES,
   type DigestPreferences,
@@ -27,16 +29,19 @@ export const instant = false;
 export default async function AjustesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ aviso?: string }>;
+  searchParams: Promise<{ aviso?: string; detalle?: string }>;
 }) {
   await connection();
-  const aviso = (await searchParams).aviso;
+  const params = await searchParams;
+  const aviso = params.aviso;
+  const detalle = params.detalle;
 
   let userEmail = "persona.demo@example.com";
   let displayName = "Persona de ejemplo";
   let preferences: DigestPreferences = DEFAULT_DIGEST_PREFERENCES;
   let integrations: Integration[] = [];
   let profileTimezone = DEFAULT_TIMEZONE;
+  let adminStatus: AdminStatus = "ok";
 
   if (!isDemoMode()) {
     const supabase = await createSupabaseServerClient();
@@ -54,14 +59,44 @@ export default async function AjustesPage({
     if (!preferences.digest_email) preferences.digest_email = userEmail;
     if (profile?.timezone) profileTimezone = profile.timezone;
     integrations = await listIntegrations(data.user.id);
+    adminStatus = await getAdminStatus();
   }
 
   const avisos: Record<string, string> = {
-    conectado: "Conexión guardada. Ya puedes sincronizar tus datos.",
+    conectado:
+      "Conexión guardada. Ya puedes ver tu agenda y tu correo reciente en el panel.",
+    conectado_parcial:
+      "Conexión guardada para una parte de los servicios. Conecta el resto cuando quieras.",
     oauth_fallido: "La conexión con Google no se pudo completar. Inténtalo de nuevo.",
     oauth_no_configurado:
       "Falta configurar las credenciales de Google OAuth en el entorno.",
   };
+
+  const fallos: Record<string, string> = {
+    denegado: "Has denegado el acceso en la pantalla de permisos de Google.",
+    state: "La solicitud de conexión no es válida o ha caducado. Vuelve a intentarlo.",
+    pkce: "No se pudo verificar la solicitud de conexión. Vuelve a intentarlo.",
+    sesion: "Tu sesión caducó durante la conexión. Inicia sesión y repite.",
+    config_clave_cifrado:
+      "Falta TOKEN_ENCRYPTION_KEY en el servidor: no se pueden guardar credenciales.",
+    sin_refresco:
+      "Google no devolvió un permiso de renovación. Vuelve a conectar la cuenta.",
+    admin_no_configurado:
+      "El servidor no tiene SUPABASE_SERVICE_ROLE_KEY: no se pueden guardar las credenciales.",
+    admin_invalido:
+      "La clave de servicio de Supabase no es válida. Actualízala y vuelve a conectar.",
+    admin_sin_esquema:
+      "Faltan las tablas en Supabase: aplica las migraciones de supabase/migrations/.",
+    admin_error_servidor:
+      "No se pudo comprobar Supabase. Revisa la conexión del servidor y vuelve a intentarlo.",
+    guardado: "No se pudo guardar la conexión en la base de datos.",
+    token: "Google no pudo completar el intercambio de credenciales.",
+  };
+
+  const mensajeAviso =
+    aviso === "oauth_fallido"
+      ? (fallos[detalle ?? ""] ?? avisos.oauth_fallido)
+      : avisos[aviso ?? ""];
 
   return (
     <div className="space-y-6">
@@ -74,12 +109,12 @@ export default async function AjustesPage({
         </p>
       </header>
 
-      {aviso && avisos[aviso] && (
+      {aviso && mensajeAviso && (
         <p
           role="status"
           className="rounded-lg border border-teal-200 bg-teal-50 px-3 py-2 text-sm text-teal-900 dark:border-teal-900 dark:bg-teal-950 dark:text-teal-100"
         >
-          {avisos[aviso]}
+          {mensajeAviso}
         </p>
       )}
 
@@ -131,7 +166,8 @@ export default async function AjustesPage({
         <IntegrationsPanel
           integrations={integrations}
           googleConfigured={isGoogleConfigured()}
-          demoMode={isDemoMode()}
+          callbackUrl={GOOGLE_REDIRECT_URI}
+          adminStatus={adminStatus}
         />
       </Card>
 

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { GymTracker } from "@/components/gym-tracker";
 import { HabitsTracker } from "@/components/habits-tracker";
+import { EmailSummaryButton } from "@/components/email-summary";
 import { TasksSection } from "@/components/tasks-section";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -58,7 +59,7 @@ export default async function HoyPage() {
         <SummaryCard
           label="Mensajes por revisar"
           value={String(importantEmails.length)}
-          hint="Solo metadatos; el cuerpo queda en tu correo"
+          hint="El cuerpo no se guarda; se lee al resumir"
         />
         <SummaryCard
           label="Estado"
@@ -112,12 +113,12 @@ export default async function HoyPage() {
 
         <Card
           title="Correo reciente"
-          description="Solo remitente, asunto y fecha. El contenido permanece en tu proveedor."
+          description="Remitente, asunto y un fragmento. El cuerpo se lee solo cuando pides un resumen."
         >
           {emails.length === 0 ? (
             <EmptyState
               title="Sin mensajes"
-              description="Conecta Gmail (solo metadatos) en Ajustes para ver aquí lo reciente."
+              description="Conecta Gmail en Ajustes para ver aquí lo reciente."
             />
           ) : (
             <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
@@ -128,6 +129,11 @@ export default async function HoyPage() {
                     {mail.is_unread && (
                       <span className="text-xs font-medium text-teal-800 dark:text-teal-200">
                         No leído
+                      </span>
+                    )}
+                    {mail.relevance_reason && (
+                      <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                        {mail.relevance_reason}
                       </span>
                     )}
                     <span className="ml-auto text-xs text-zinc-500 dark:text-zinc-400">
@@ -148,6 +154,11 @@ export default async function HoyPage() {
                       mail.subject
                     )}
                   </p>
+                  {mail.snippet && (
+                    <p className="truncate text-xs text-zinc-600 dark:text-zinc-400">
+                      {mail.snippet}
+                    </p>
+                  )}
                   <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">
                     {mail.sender_name ?? mail.sender_email}
                     {mail.external_url && (
@@ -161,6 +172,9 @@ export default async function HoyPage() {
                       </a>
                     )}
                   </p>
+                  {!isDemoMode() && mail.external_id && (
+                    <EmailSummaryButton messageId={mail.external_id} />
+                  )}
                 </li>
               ))}
             </ul>

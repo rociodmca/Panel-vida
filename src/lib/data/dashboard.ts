@@ -30,6 +30,11 @@ export async function getUpcomingEvents(limit = 10): Promise<CalendarEvent[]> {
   }));
 }
 
+const EMAIL_COLUMNS =
+  "id, external_id, sender_name, sender_email, subject, received_at, is_unread, is_important, external_url";
+const EMAIL_COLUMNS_WITH_RELEVANCE =
+  "id, external_id, sender_name, sender_email, subject, snippet, received_at, is_unread, is_important, relevance_score, relevance_reason, external_url";
+
 export async function getRecentEmails(limit = 5): Promise<EmailItem[]> {
   if (isDemoMode()) {
     return [...DEMO_EMAILS]
@@ -38,12 +43,22 @@ export async function getRecentEmails(limit = 5): Promise<EmailItem[]> {
   }
   const supabase = await createSupabaseServerClient();
   if (!supabase) return [];
-  const { data } = await supabase
+
+  const { data, error } = await supabase
     .from("email_items_cache")
-    .select(
-      "id, sender_name, sender_email, subject, received_at, is_unread, is_important, external_url",
-    )
+    .select(EMAIL_COLUMNS_WITH_RELEVANCE)
     .order("received_at", { ascending: false })
     .limit(limit);
+
+  // La migración 0004 (snippet y relevancia) puede aún no estar aplicada.
+  if (error) {
+    const fallback = await supabase
+      .from("email_items_cache")
+      .select(EMAIL_COLUMNS)
+      .order("received_at", { ascending: false })
+      .limit(limit);
+    if (fallback.error) return [];
+    return (fallback.data as EmailItem[]) ?? [];
+  }
   return (data as EmailItem[]) ?? [];
 }

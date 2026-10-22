@@ -32,9 +32,16 @@ export interface EmailItem {
   sender_name: string | null;
   sender_email: string;
   subject: string;
+  /** Vista previa corta. Presente desde la migración 0004. */
+  snippet?: string | null;
   received_at: string;
   is_unread: boolean;
   is_important: boolean;
+  /** Motivo de relevancia mostrado al usuario. */
+  relevance_reason?: string | null;
+  relevance_score?: number | null;
+  /** Identificador del mensaje en Gmail: necesario para leer su contenido. */
+  external_id?: string | null;
   external_url: string | null;
 }
 
