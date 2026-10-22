@@ -125,15 +125,16 @@ export class OpenAiCompatibleProvider implements AiProvider {
         signal: controller.signal,
       });
       if (!response.ok) {
-        // Un 4xx suele venir de un parámetro no admitido: se reintenta con
-        // una petición mínima. Un 5xx o un 429 no se reintenta.
+        // 400/422 suelen venir de un parámetro no admitido: se reintenta con
+        // una petición mínima. 401 (clave inválida), 403, 404 (modelo
+        // inexistente), 429 y 5xx no se arreglan quitando parámetros.
         logProviderError({
           event: "ai_provider_http_error",
           model: this.model,
           status: response.status,
           detalle: await readProviderError(response),
         });
-        return response.status >= 400 && response.status < 500
+        return response.status === 400 || response.status === 422
           ? { kind: "retry" }
           : { kind: "fatal" };
       }

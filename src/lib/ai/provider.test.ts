@@ -64,6 +64,20 @@ describe("OpenAiCompatibleProvider", () => {
     expect(retryBody.reasoning_effort).toBeUndefined();
   });
 
+  it("no reintenta si la clave no es válida", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(errorResponse(401));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const provider = new OpenAiCompatibleProvider(
+      "clave",
+      "modelo",
+      "https://ejemplo.test/v1",
+      5000,
+    );
+    expect(await provider.complete("resume", "sistema")).toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it("añade reasoning_effort cuando está configurado", async () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse("{}"));
     vi.stubGlobal("fetch", fetchMock);
