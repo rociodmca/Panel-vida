@@ -48,4 +48,18 @@ describe("proxy: traspaso del código OAuth", () => {
     const res = await call("/hoy");
     expect(res.headers.get("location")).toBeNull();
   });
+
+  it("traslada a la raíz los errores del proveedor", async () => {
+    const res = await call("/?error=invalid_request&error_description=prueba");
+    expect(res.status).toBe(307);
+    const location = new URL(res.headers.get("location")!);
+    expect(location.pathname).toBe("/login");
+    expect(location.searchParams.get("error")).toBe("invalid_request");
+    expect(location.searchParams.get("error_description")).toBe("prueba");
+  });
+
+  it("deja pasar la raíz sin errores", async () => {
+    const res = await call("/");
+    expect(res.headers.get("location")).toBeNull();
+  });
 });

@@ -21,6 +21,23 @@ export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const code = request.nextUrl.searchParams.get("code");
 
+  // El proveedor puede devolver en la raíz con el motivo del fallo (por
+  // ejemplo, cuando Supabase rechaza la URL de redirección). Se traslada al
+  // formulario de acceso para que el error no se pierda.
+  if (pathname === "/") {
+    const query = new URLSearchParams();
+    for (const key of ["error", "error_code", "error_description"]) {
+      const value = request.nextUrl.searchParams.get(key);
+      if (value) query.set(key, value.slice(0, 200));
+    }
+    if (query.size > 0) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/login";
+      url.search = query.toString();
+      return NextResponse.redirect(url);
+    }
+  }
+
   // El proveedor vuelve con el código PKCE en la URL de destino. Se lleva a la
   // ruta de callback, que lo canjea por la sesión y deja la cookie httpOnly.
   if (code && isProtected(pathname)) {
@@ -57,5 +74,11 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/hoy/:path*", "/agenda/:path*", "/tareas/:path*", "/ajustes/:path*"],
+  matcher: [
+    "/",
+    "/hoy/:path*",
+    "/agenda/:path*",
+    "/tareas/:path*",
+    "/ajustes/:path*",
+  ],
 };
