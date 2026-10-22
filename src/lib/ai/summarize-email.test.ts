@@ -58,6 +58,14 @@ describe("validación de la respuesta del modelo", () => {
     expect(parseAiSummary('{"puntos":["a"]}')).toBeNull();
   });
 
+  it("extrae el JSON si el proveedor añade texto alrededor", () => {
+    const parsed = parseAiSummary(
+      'Aquí tienes el resumen:\n{"resumen":"Texto","puntos":[],"requiere_accion":false,"tareas":[]}\nEspero que te sirva.',
+    );
+    expect(parsed?.resumen).toBe("Texto");
+    expect(parsed?.fuente).toBe("ia");
+  });
+
   it("ignora campos que no son texto", () => {
     const parsed = parseAiSummary(
       '{"resumen":"Bien","puntos":["uno",2,null],"tareas":[3],"requiere_accion":"sí"}',

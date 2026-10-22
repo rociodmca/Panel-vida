@@ -70,12 +70,7 @@ export function parseAiSummary(raw: string): EmailSummary | null {
     .replace(/^```(?:json)?/i, "")
     .replace(/```$/, "")
     .trim();
-  let data: unknown;
-  try {
-    data = JSON.parse(cleaned);
-  } catch {
-    return null;
-  }
+  const data = parseJsonObject(cleaned);
   if (!data || typeof data !== "object") return null;
   const record = data as Record<string, unknown>;
 
@@ -113,6 +108,26 @@ export function parseAiSummary(raw: string): EmailSummary | null {
 function truncate(value: string, max: number): string {
   if (value.length <= max) return value;
   return `${value.slice(0, max - 1).trimEnd()}…`;
+}
+
+/**
+ * Extrae el objeto JSON de la respuesta del modelo. Algunos proveedores
+ * añaden texto alrededor del JSON o lo envuelven en bloques ```json.
+ */
+function parseJsonObject(text: string): unknown {
+  try {
+    return JSON.parse(text);
+  } catch {
+    // Continúa con la extracción de un bloque JSON dentro del texto.
+  }
+  const start = text.indexOf("{");
+  const end = text.lastIndexOf("}");
+  if (start === -1 || end === -1 || end <= start) return null;
+  try {
+    return JSON.parse(text.slice(start, end + 1));
+  } catch {
+    return null;
+  }
 }
 
 function isNoise(line: string): boolean {
