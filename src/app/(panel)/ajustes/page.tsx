@@ -1,12 +1,15 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
+import { AiSettings } from "@/components/ai-settings";
 import { DataControls } from "@/components/data-controls";
 import { DigestActions, DigestSettingsForm } from "@/components/digest-settings";
 import { IntegrationsPanel } from "@/components/integrations-panel";
 import { LogoutButton } from "@/components/logout-button";
 import { Card } from "@/components/ui/card";
 import {
+  AI_PROVIDER_API_KEY,
+  AI_PROVIDER_MODEL,
   APP_URL,
   DEFAULT_TIMEZONE,
   GOOGLE_REDIRECT_URI,
@@ -42,6 +45,7 @@ export default async function AjustesPage({
   let integrations: Integration[] = [];
   let profileTimezone = DEFAULT_TIMEZONE;
   let adminStatus: AdminStatus = "ok";
+  let aiEnabled = false;
 
   if (!isDemoMode()) {
     const supabase = await createSupabaseServerClient();
@@ -56,6 +60,9 @@ export default async function AjustesPage({
       supabase!.from("profiles").select("*").maybeSingle(),
     ]);
     if (prefs) preferences = prefs as DigestPreferences;
+    aiEnabled = Boolean(
+      (prefs as unknown as { ai_enabled?: boolean } | null)?.ai_enabled,
+    );
     if (!preferences.digest_email) preferences.digest_email = userEmail;
     if (profile?.timezone) profileTimezone = profile.timezone;
     integrations = await listIntegrations(data.user.id);
@@ -157,6 +164,17 @@ export default async function AjustesPage({
           </h3>
           <DigestActions demoMode={isDemoMode()} />
         </div>
+      </Card>
+
+      <Card
+        title="Resumen de correo con IA"
+        description="Elige si un modelo de lenguaje resume los correos que abres en el panel. Es reversible y solo afecta a los resúmenes bajo demanda."
+      >
+        <AiSettings
+          aiEnabled={aiEnabled}
+          providerConfigured={Boolean(AI_PROVIDER_API_KEY && AI_PROVIDER_MODEL)}
+          model={AI_PROVIDER_MODEL}
+        />
       </Card>
 
       <Card
