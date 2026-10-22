@@ -40,12 +40,14 @@ export async function proxy(request: NextRequest) {
 
   // El proveedor vuelve con el código PKCE en la URL de destino. Se lleva a la
   // ruta de callback, que lo canjea por la sesión y deja la cookie httpOnly.
-  if (code && isProtected(pathname)) {
+  // La raíz también recibe el código cuando la URL de redirección autorizada
+  // es la propia del sitio.
+  if (code && (isProtected(pathname) || pathname === "/")) {
     const url = request.nextUrl.clone();
     url.pathname = OAUTH_CALLBACK;
     url.search = "";
     url.searchParams.set("code", code);
-    url.searchParams.set("next", pathname);
+    url.searchParams.set("next", isProtected(pathname) ? pathname : "/hoy");
     return NextResponse.redirect(url);
   }
 

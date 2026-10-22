@@ -62,4 +62,13 @@ describe("proxy: traspaso del código OAuth", () => {
     const res = await call("/");
     expect(res.headers.get("location")).toBeNull();
   });
+
+  it("lleva a la callback el código que llega en la raíz", async () => {
+    const res = await call("/?code=codigo-pkce");
+    expect(res.status).toBe(307);
+    const location = new URL(res.headers.get("location")!);
+    expect(location.pathname).toBe("/auth/callback");
+    expect(location.searchParams.get("code")).toBe("codigo-pkce");
+    expect(location.searchParams.get("next")).toBe("/hoy");
+  });
 });

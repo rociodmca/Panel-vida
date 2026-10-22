@@ -81,7 +81,10 @@ export async function loginWithGoogle(): Promise<void> {
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
-      redirectTo: `${APP_URL}/hoy`,
+      // La URL de retorno es exactamente la del sitio: Supabase solo acepta
+      // esa URL (o las que estén en su lista de redirecciones permitidas).
+      // Si se añade una ruta, esa ruta debe estar permitida también.
+      redirectTo: APP_URL,
       skipBrowserRedirect: true,
       scopes: scopes.join(" "),
     },
