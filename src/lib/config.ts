@@ -57,6 +57,10 @@ export const AI_PROVIDER_JSON_MODE = env.AI_PROVIDER_JSON_MODE !== "false";
 export const AI_PROVIDER_REASONING_EFFORT = (
   env.AI_PROVIDER_REASONING_EFFORT ?? ""
 ).trim();
+// Modelo alternativo si el principal responde 429/5xx (sobrecarga).
+export const AI_PROVIDER_FALLBACK_MODEL = (
+  env.AI_PROVIDER_FALLBACK_MODEL ?? ""
+).trim();
 
 // Coordenadas del clima en el resumen matinal (por defecto: Madrid).
 export const DIGEST_WEATHER_LAT = env.DIGEST_WEATHER_LAT ?? "40.4168";

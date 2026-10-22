@@ -1,6 +1,7 @@
 import {
   AI_PROVIDER_API_KEY,
   AI_PROVIDER_BASE_URL,
+  AI_PROVIDER_FALLBACK_MODEL,
   AI_PROVIDER_JSON_MODE,
   AI_PROVIDER_MODEL,
   AI_PROVIDER_REASONING_EFFORT,
@@ -41,11 +42,14 @@ interface ProviderOptions {
   jsonMode: boolean;
   /** `none`, `low`… para modelos que razonan (Gemini 2.5 y derivados). */
   reasoningEffort: string;
+  /** Modelo alternativo si el principal está sobrecargado o no existe. */
+  fallbackModel?: string;
 }
 
 type Attempt =
   | { kind: "ok"; content: string }
   | { kind: "retry" }
+  | { kind: "transient" }
   | { kind: "fatal" };
 
 export class OpenAiCompatibleProvider implements AiProvider {
@@ -62,28 +66,42 @@ export class OpenAiCompatibleProvider implements AiProvider {
   async complete(prompt: string, system: string): Promise<string | null> {
     // El presupuesto de tiempo es para toda la operación, no por intento.
     const deadline = Date.now() + this.timeoutMs;
-    // Escalera de intentos: primero con todos los parámetros y, si el
-    // proveedor rechaza alguno, se repite con una petición mínima (solo
-    // modelo, mensajes y presupuesto de tokens).
-    const attempts = [
+    // Escalera de intentos:
+    //  1. Todos los parámetros con el modelo principal.
+    //  2. Petición mínima (por si el proveedor rechaza algún parámetro).
+    //  3. Modelo de respaldo, si está configurado (503 = sobrecarga).
+    const full = () =>
       this.buildBody(system, prompt, {
         jsonMode: this.options.jsonMode,
         extra: true,
         maxTokens: MAX_OUTPUT_TOKENS,
-      }),
+      });
+    const minimal = () =>
       this.buildBody(system, prompt, {
         jsonMode: false,
         extra: false,
         maxTokens: MAX_OUTPUT_TOKENS_FALLBACK,
-      }),
-    ];
+      });
 
-    for (const body of attempts) {
+    const plan: Array<{ model: string; body: Record<string, unknown> }> = [
+      { model: this.model, body: full() },
+      { model: this.model, body: minimal() },
+    ];
+    if (this.options.fallbackModel) {
+      plan.push({ model: this.options.fallbackModel, body: full() });
+    }
+
+    // Si un modelo responde 503/429 se prueba directamente el siguiente
+    // modelo (suele ser sobrecarga puntual del más nuevo).
+    const deadModels = new Set<string>();
+    for (const step of plan) {
+      if (deadModels.has(step.model)) continue;
       const remaining = deadline - Date.now();
       if (remaining <= 0) return null;
-      const attempt = await this.call(body, remaining);
+      const attempt = await this.call(step.body, step.model, remaining);
       if (attempt.kind === "ok") return attempt.content;
       if (attempt.kind === "fatal") return null;
+      if (attempt.kind === "transient") deadModels.add(step.model);
     }
     return null;
   }
@@ -94,7 +112,6 @@ export class OpenAiCompatibleProvider implements AiProvider {
     opts: { jsonMode: boolean; extra: boolean; maxTokens: number },
   ) {
     const body: Record<string, unknown> = {
-      model: this.model,
       max_tokens: opts.maxTokens,
       messages: [
         { role: "system", content: system },
@@ -111,7 +128,11 @@ export class OpenAiCompatibleProvider implements AiProvider {
     return body;
   }
 
-  private async call(body: Record<string, unknown>, timeoutMs: number): Promise<Attempt> {
+  private async call(
+    body: Record<string, unknown>,
+    model: string,
+    timeoutMs: number,
+  ): Promise<Attempt> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
@@ -121,22 +142,26 @@ export class OpenAiCompatibleProvider implements AiProvider {
           "Content-Type": "application/json",
           Authorization: `Bearer ${this.apiKey}`,
         },
-        body: JSON.stringify(body),
+        body: JSON.stringify({ model, ...body }),
         signal: controller.signal,
       });
       if (!response.ok) {
-        // 400/422 suelen venir de un parámetro no admitido: se reintenta con
-        // una petición mínima. 401 (clave inválida), 403, 404 (modelo
-        // inexistente), 429 y 5xx no se arreglan quitando parámetros.
         logProviderError({
           event: "ai_provider_http_error",
-          model: this.model,
+          model,
           status: response.status,
           detalle: await readProviderError(response),
         });
-        return response.status === 400 || response.status === 422
-          ? { kind: "retry" }
-          : { kind: "fatal" };
+        // 400/422: el proveedor rechaza algún parámetro → reintento mínimo.
+        if (response.status === 400 || response.status === 422) {
+          return { kind: "retry" };
+        }
+        // 429/5xx: sobrecarga temporal → se prueba el modelo de respaldo.
+        if (response.status === 429 || response.status >= 500) {
+          return { kind: "transient" };
+        }
+        // 401/403/404: clave, permisos o modelo; reintentar no arregla nada.
+        return { kind: "fatal" };
       }
       const data = (await response.json()) as {
         choices?: Array<{ message?: { content?: string } }>;
@@ -145,7 +170,7 @@ export class OpenAiCompatibleProvider implements AiProvider {
       if (typeof content !== "string" || !content.trim()) {
         logProviderError({
           event: "ai_provider_empty_response",
-          model: this.model,
+          model,
         });
         return { kind: "retry" };
       }
@@ -154,7 +179,7 @@ export class OpenAiCompatibleProvider implements AiProvider {
       // Error de red o tiempo agotado: no tiene sentido reintentar.
       logProviderError({
         event: "ai_provider_request_failed",
-        model: this.model,
+        model,
         status: error instanceof Error && error.name === "AbortError" ? 408 : 0,
         detalle: error instanceof Error ? error.name : "desconocido",
       });
@@ -175,8 +200,14 @@ function logProviderError(detail: Record<string, unknown>): void {
 
 /** Extrae el mensaje de error del proveedor sin volcar la respuesta entera. */
 async function readProviderError(response: Response): Promise<string> {
+  let text = "";
   try {
-    const data = (await response.json()) as {
+    text = await response.text();
+  } catch {
+    return "sin detalle";
+  }
+  try {
+    const data = JSON.parse(text) as {
       error?: { code?: unknown; status?: unknown; message?: unknown };
     };
     const error = data?.error;
@@ -186,7 +217,9 @@ async function readProviderError(response: Response): Promise<string> {
       typeof error?.message === "string" ? error.message.slice(0, 200) : undefined;
     return [code, status, message].filter(Boolean).join(" · ") || "sin detalle";
   } catch {
-    return "sin detalle";
+    // Respuesta no JSON (HTML de un proxy, por ejemplo): solo un fragmento.
+    const snippet = text.replace(/\s+/g, " ").trim().slice(0, 120);
+    return snippet || "sin detalle";
   }
 }
 
@@ -201,6 +234,7 @@ export function getAiProvider(): AiProvider | null {
     {
       jsonMode: AI_PROVIDER_JSON_MODE,
       reasoningEffort: AI_PROVIDER_REASONING_EFFORT,
+      fallbackModel: AI_PROVIDER_FALLBACK_MODEL,
     },
   );
 }

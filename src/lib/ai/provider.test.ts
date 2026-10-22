@@ -96,7 +96,8 @@ describe("OpenAiCompatibleProvider", () => {
   });
 
   it("devuelve null si el proveedor responde con un error de servidor", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(errorResponse(500)));
+    const fetchMock = vi.fn().mockResolvedValue(errorResponse(500));
+    vi.stubGlobal("fetch", fetchMock);
 
     const provider = new OpenAiCompatibleProvider(
       "clave",
@@ -105,6 +106,29 @@ describe("OpenAiCompatibleProvider", () => {
       5000,
     );
     expect(await provider.complete("resume", "sistema")).toBeNull();
+    // Sin modelo de respaldo no se repite contra el mismo modelo.
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("usa el modelo de respaldo si el principal está sobrecargado (503)", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(errorResponse(503))
+      .mockResolvedValueOnce(jsonResponse('{"resumen":"desde el respaldo"}'));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const provider = new OpenAiCompatibleProvider(
+      "clave",
+      "gemini-3.8-flash",
+      "https://ejemplo.test/v1",
+      5000,
+      { jsonMode: true, reasoningEffort: "", fallbackModel: "gemini-3.6-flash" },
+    );
+    const out = await provider.complete("resume", "sistema");
+
+    expect(out).toBe('{"resumen":"desde el respaldo"}');
+    const body = JSON.parse((fetchMock.mock.calls[1][1] as RequestInit).body as string);
+    expect(body.model).toBe("gemini-3.6-flash");
   });
 
   it("devuelve null si la red falla", async () => {
