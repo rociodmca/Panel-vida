@@ -167,6 +167,22 @@ AI_PROVIDER_MODEL=...
 AI_PROVIDER_BASE_URL=https://api.openai.com/v1
 ```
 
+Con Gemini (nivel gratuito o de pago) basta con apuntar al endpoint
+compatible con OpenAI y usar dos modelos: el principal y uno de respaldo
+para cuando Google responde 503 por sobrecarga.
+
+```env
+AI_PROVIDER_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai
+AI_PROVIDER_MODEL=gemini-3.6-flash
+AI_PROVIDER_FALLBACK_MODEL=gemini-3.5-flash-lite
+AI_PROVIDER_REASONING_EFFORT=minimal
+AI_PROVIDER_TIMEOUT_MS=9000
+```
+
+El diagnóstico no guarda contenido: cada resumen registra si se usó IA y,
+si no, el motivo (`desactivada`, `sin_proveedor`, `error_proveedor`,
+`respuesta_invalida`), y cada fallo del proveedor, su estado HTTP.
+
 El consentimiento es revocable con `user_preferences.ai_enabled`: si está a
 `false`, el contenido del correo **no** sale del servidor.
 
