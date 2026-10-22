@@ -1,5 +1,5 @@
 import { getAiProvider, EMAIL_SUMMARY_SYSTEM_PROMPT } from "@/lib/ai/provider";
-import type { AiProvider, EmailSummary } from "@/lib/ai/types";
+import type { AiProvider, EmailSummary, SummaryReason } from "@/lib/ai/types";
 
 /**
  * Resumen de un correo.
@@ -136,7 +136,10 @@ function isNoise(line: string): boolean {
 }
 
 /** Resumen sin IA: heurística simple sobre el texto del correo. */
-export function deterministicSummary(email: EmailToSummarize): EmailSummary {
+export function deterministicSummary(
+  email: EmailToSummarize,
+  motivo?: SummaryReason,
+): EmailSummary {
   const lines = email.body
     .split(/\r?\n/)
     .map((line) => line.trim())
@@ -176,6 +179,7 @@ export function deterministicSummary(email: EmailToSummarize): EmailSummary {
     requiere_accion: requiereAccion,
     tareas,
     fuente: "determinista",
+    ...(motivo ? { motivo } : {}),
   };
 }
 
@@ -190,17 +194,17 @@ export async function summarizeEmail(
   email: EmailToSummarize,
   options: SummarizeOptions,
 ): Promise<EmailSummary> {
-  if (!options.aiEnabled) return deterministicSummary(email);
+  if (!options.aiEnabled) return deterministicSummary(email, "desactivada");
 
   const provider = options.provider ?? getAiProvider();
-  if (!provider) return deterministicSummary(email);
+  if (!provider) return deterministicSummary(email, "sin_proveedor");
 
   const raw = await provider.complete(
     buildSummaryPrompt(email),
     EMAIL_SUMMARY_SYSTEM_PROMPT,
   );
-  if (!raw) return deterministicSummary(email);
+  if (!raw) return deterministicSummary(email, "error_proveedor");
 
   const parsed = parseAiSummary(raw);
-  return parsed ?? deterministicSummary(email);
+  return parsed ?? deterministicSummary(email, "respuesta_invalida");
 }

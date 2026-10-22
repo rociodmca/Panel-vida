@@ -8,6 +8,7 @@ import {
   GmailApiError,
 } from "@/lib/integrations/google/gmail";
 import { summarizeEmail } from "@/lib/ai/summarize-email";
+import { getAiProvider } from "@/lib/ai/provider";
 import type { EmailSummary } from "@/lib/ai/types";
 
 export interface EmailActionState {
@@ -82,6 +83,17 @@ export async function summarizeEmailAction(
       body: content.body,
     },
     { aiEnabled },
+  );
+
+  // Diagnóstico sin datos privados: ni el correo ni su contenido se registran.
+  console.info(
+    JSON.stringify({
+      event: "email_summary",
+      ai_enabled: aiEnabled,
+      provider_configured: Boolean(getAiProvider()),
+      source: summary.fuente,
+      reason: summary.motivo ?? null,
+    }),
   );
 
   // Solo se guarda el resumen, nunca el cuerpo del correo.

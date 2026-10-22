@@ -113,6 +113,28 @@ describe("orquestación", () => {
       provider: providerThatAnswers("texto sin json"),
     });
     expect(resumen.fuente).toBe("determinista");
+    expect(resumen.motivo).toBe("respuesta_invalida");
+  });
+
+  it("indica el motivo cuando no hay proveedor configurado", async () => {
+    const resumen = await summarizeEmail(correo, {
+      aiEnabled: true,
+      provider: null,
+    });
+    expect(resumen.fuente).toBe("determinista");
+    expect(resumen.motivo).toBe("sin_proveedor");
+  });
+
+  it("indica el motivo cuando el proveedor no responde", async () => {
+    const provider: AiProvider = {
+      name: "prueba",
+      async complete() {
+        return null;
+      },
+    };
+    const resumen = await summarizeEmail(correo, { aiEnabled: true, provider });
+    expect(resumen.fuente).toBe("determinista");
+    expect(resumen.motivo).toBe("error_proveedor");
   });
 
   it("no llama al proveedor si la IA está desactivada", async () => {
@@ -127,6 +149,7 @@ describe("orquestación", () => {
     const resumen = await summarizeEmail(correo, { aiEnabled: false, provider });
     expect(llamado).toBe(false);
     expect(resumen.fuente).toBe("determinista");
+    expect(resumen.motivo).toBe("desactivada");
   });
 
   it("manda el correo como dato delimitado, no como instrucción", () => {

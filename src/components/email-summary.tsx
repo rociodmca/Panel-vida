@@ -6,6 +6,24 @@ import {
   type EmailActionState,
 } from "@/app/actions/emails";
 import { Button } from "@/components/ui/button";
+import type { EmailSummary } from "@/lib/ai/types";
+
+/** Explica de dónde salió el resumen y qué hacer si no es el de la IA. */
+function sourceLabel(summary: EmailSummary): string {
+  if (summary.fuente === "ia") return "Resumen con IA";
+  switch (summary.motivo) {
+    case "desactivada":
+      return "Resumen automático · la IA está desactivada en Ajustes";
+    case "sin_proveedor":
+      return "Resumen automático · la IA no está configurada en el servidor";
+    case "respuesta_invalida":
+      return "Resumen automático · la IA no devolvió un resumen válido";
+    case "error_proveedor":
+      return "Resumen automático · no se pudo contactar con la IA";
+    default:
+      return "Resumen automático (sin IA configurada)";
+  }
+}
 
 /**
  * Resumen de un correo bajo demanda.
@@ -56,9 +74,7 @@ export function EmailSummaryButton({ messageId }: { messageId: string }) {
             </p>
           )}
           <p className="text-[11px] text-zinc-500 dark:text-zinc-500">
-            {summary.fuente === "ia"
-              ? "Resumen con IA"
-              : "Resumen automático (sin IA configurada)"}
+            {sourceLabel(summary)}
             {summary.requiere_accion ? " · parece pedir una acción" : ""}
           </p>
         </div>

@@ -8,6 +8,13 @@
 
 export type SummarySource = "ia" | "determinista";
 
+/** Por qué se ha usado el resumen determinista en lugar del de la IA. */
+export type SummaryReason =
+  | "desactivada"
+  | "sin_proveedor"
+  | "error_proveedor"
+  | "respuesta_invalida";
+
 export interface EmailSummary {
   /** Resumen en una o dos frases, en español. */
   resumen: string;
@@ -19,6 +26,8 @@ export interface EmailSummary {
   tareas: string[];
   /** De dónde salió el resumen. */
   fuente: SummarySource;
+  /** Motivo del resumen determinista (solo si `fuente` es "determinista"). */
+  motivo?: SummaryReason;
 }
 
 export interface AiProvider {

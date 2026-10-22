@@ -127,6 +127,12 @@ export class OpenAiCompatibleProvider implements AiProvider {
       if (!response.ok) {
         // Un 4xx suele venir de un parámetro no admitido: se reintenta con
         // una petición mínima. Un 5xx o un 429 no se reintenta.
+        logProviderError({
+          event: "ai_provider_http_error",
+          model: this.model,
+          status: response.status,
+          detalle: await readProviderError(response),
+        });
         return response.status >= 400 && response.status < 500
           ? { kind: "retry" }
           : { kind: "fatal" };
@@ -135,15 +141,51 @@ export class OpenAiCompatibleProvider implements AiProvider {
         choices?: Array<{ message?: { content?: string } }>;
       };
       const content = data.choices?.[0]?.message?.content;
-      return typeof content === "string" && content.trim()
-        ? { kind: "ok", content }
-        : { kind: "retry" };
-    } catch {
+      if (typeof content !== "string" || !content.trim()) {
+        logProviderError({
+          event: "ai_provider_empty_response",
+          model: this.model,
+        });
+        return { kind: "retry" };
+      }
+      return { kind: "ok", content };
+    } catch (error) {
       // Error de red o tiempo agotado: no tiene sentido reintentar.
+      logProviderError({
+        event: "ai_provider_request_failed",
+        model: this.model,
+        status: error instanceof Error && error.name === "AbortError" ? 408 : 0,
+        detalle: error instanceof Error ? error.name : "desconocido",
+      });
       return { kind: "fatal" };
     } finally {
       clearTimeout(timer);
     }
+  }
+}
+
+/**
+ * Registro de diagnóstico sin datos privados: nunca se escribe el contenido
+ * del correo ni la clave. Solo estado, modelo y el mensaje del proveedor.
+ */
+function logProviderError(detail: Record<string, unknown>): void {
+  console.warn(JSON.stringify({ ...detail, ts: new Date().toISOString() }));
+}
+
+/** Extrae el mensaje de error del proveedor sin volcar la respuesta entera. */
+async function readProviderError(response: Response): Promise<string> {
+  try {
+    const data = (await response.json()) as {
+      error?: { code?: unknown; status?: unknown; message?: unknown };
+    };
+    const error = data?.error;
+    const code = typeof error?.code === "number" ? error.code : undefined;
+    const status = typeof error?.status === "string" ? error.status : undefined;
+    const message =
+      typeof error?.message === "string" ? error.message.slice(0, 200) : undefined;
+    return [code, status, message].filter(Boolean).join(" · ") || "sin detalle";
+  } catch {
+    return "sin detalle";
   }
 }
 
