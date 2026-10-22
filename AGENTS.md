@@ -391,6 +391,12 @@ No incluir `.env.local` en Git. Añadir los secretos a Vercel y al entorno local
 9. Desplegar producción con dominio y HTTPS, callbacks Google exactos, límites/alertas y procedimiento documentado de rollback.
 10. Antes de usuarios externos, confirmar verificación de scopes Google, revisión de privacidad/contratos y funcionamiento de solicitudes de borrado.
 
+### Requisitos que debe cumplir el despliegue para que el acceso con Google funcione
+
+- La **URL del sitio de Supabase** (Authentication → URL Configuration → Site URL) debe ser la URL pública por la que se entra al panel, y `NEXT_PUBLIC_APP_URL` debe coincidir con ella. El destino de vuelta del proveedor solo se acepta si es exactamente la URL del sitio o una URL permitida en esa misma lista; con una ruta (`/hoy`) se rechaza y el usuario vuelve al inicio sin sesión.
+- La cookie de sesión es de host: el proveedor debe devolver a **la misma URL** con la que se inició el flujo, o el canje del código falla por falta del verificador PKCE.
+- El proyecto de Vercel no debe tener activa la protección de despliegue (`ssoProtection`) en los dominios de Vercel: esa pantalla de autenticación de Vercel intercepta la vuelta del proveedor e impide completar el acceso. El panel sigue protegido por Supabase Auth y RLS.
+
 ## 17. Supuestos y preguntas abiertas
 
 Las decisiones confirmadas arriba no deben reabrirse durante la implementación salvo que una limitación técnica real lo exija. Los siguientes puntos admiten defaults razonables:
