@@ -50,6 +50,13 @@ export const AI_PROVIDER_BASE_URL = (
   env.AI_PROVIDER_BASE_URL ?? "https://api.openai.com/v1"
 ).replace(/\/$/, "");
 export const AI_PROVIDER_TIMEOUT_MS = Number(env.AI_PROVIDER_TIMEOUT_MS ?? 20000);
+// `response_format: json_object` no lo admiten todos los proveedores: si se
+// rechaza, el adaptador reintenta con una petición mínima.
+export const AI_PROVIDER_JSON_MODE = env.AI_PROVIDER_JSON_MODE !== "false";
+// `none` desactiva el razonamiento interno (modelos tipo Gemini 2.5).
+export const AI_PROVIDER_REASONING_EFFORT = (
+  env.AI_PROVIDER_REASONING_EFFORT ?? ""
+).trim();
 
 // Coordenadas del clima en el resumen matinal (por defecto: Madrid).
 export const DIGEST_WEATHER_LAT = env.DIGEST_WEATHER_LAT ?? "40.4168";
