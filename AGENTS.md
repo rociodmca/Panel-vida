@@ -146,7 +146,7 @@ Una persona que vive en España, usa Gmail y Google Calendar, tiene días con co
 
 ### Módulos sugeridos
 
-- `auth`: sesión, onboarding y protección de rutas.
+- `auth`: sesión, onboarding y protección de rutas. El acceso con Google usa PKCE: Supabase devuelve el código en `?code=` y la ruta `src/app/auth/callback/route.ts` lo canjea por la sesión (`exchangeCodeForSession`) antes de entrar al panel. Sin ese canje el proveedor autoriza pero la app no inicia sesión.
 - `google`: OAuth, refresh, scopes, Calendar, Gmail, revocación y errores.
 - `tasks`: CRUD y reglas de usuario.
 - `dashboard`: consultas agregadas para “Hoy”.

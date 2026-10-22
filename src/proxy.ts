@@ -3,6 +3,11 @@ import { NextResponse, type NextRequest } from "next/server";
 import { SUPABASE_ANON_KEY, SUPABASE_URL, isDemoMode } from "@/lib/config";
 
 const PROTECTED = ["/hoy", "/agenda", "/tareas", "/ajustes"];
+const OAUTH_CALLBACK = "/auth/callback";
+
+function isProtected(pathname: string): boolean {
+  return PROTECTED.some((path) => pathname === path || pathname.startsWith(`${path}/`));
+}
 
 /**
  * Protege las rutas del panel. En modo demo (sin Supabase configurado)
@@ -14,7 +19,20 @@ export async function proxy(request: NextRequest) {
   if (isDemoMode()) return NextResponse.next();
 
   const { pathname } = request.nextUrl;
-  if (!PROTECTED.some((path) => pathname === path || pathname.startsWith(`${path}/`))) {
+  const code = request.nextUrl.searchParams.get("code");
+
+  // El proveedor vuelve con el código PKCE en la URL de destino. Se lleva a la
+  // ruta de callback, que lo canjea por la sesión y deja la cookie httpOnly.
+  if (code && isProtected(pathname)) {
+    const url = request.nextUrl.clone();
+    url.pathname = OAUTH_CALLBACK;
+    url.search = "";
+    url.searchParams.set("code", code);
+    url.searchParams.set("next", pathname);
+    return NextResponse.redirect(url);
+  }
+
+  if (!isProtected(pathname)) {
     return NextResponse.next();
   }
 
